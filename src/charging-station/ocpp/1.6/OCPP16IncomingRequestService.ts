@@ -1465,14 +1465,14 @@ export class OCPP16IncomingRequestService extends OCPPIncomingRequestService {
     if (uri.protocol.startsWith('ftp:')) {
       let ftpClient: Client | undefined
       try {
-        const logFiles = readdirSync(resolve(dirname(fileURLToPath(import.meta.url)), '../'))
+        const logFiles = readdirSync(resolve(dirname(fileURLToPath(import.meta.url)), '../logs'))
           .filter(file => file.endsWith('.log'))
-          .map(file => join('./', file))
+          .map(file => join('./logs', file))
         const diagnosticsArchive = `${chargingStation.stationInfo?.chargingStationId}_logs.tar.gz`
         create({ gzip: true }, logFiles).pipe(createWriteStream(diagnosticsArchive))
         ftpClient = new Client()
         const accessResponse = await ftpClient.access({
-          host: uri.host,
+          host: uri.hostname,
           ...(isNotEmptyString(uri.port) && { port: convertToInt(uri.port) }),
           ...(isNotEmptyString(uri.username) && { user: uri.username }),
           ...(isNotEmptyString(uri.password) && { password: uri.password })
