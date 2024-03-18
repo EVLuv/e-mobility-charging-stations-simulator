@@ -1,14 +1,12 @@
 <template>
   <h1 id="action">Add Charging Stations</h1>
   <p>Template:</p>
-  <select v-model="state.template">
+  <select :key="state.renderTemplates" v-model="state.template">
     <option disabled value="">Please select a template</option>
     <option
-      v-for="template in app?.appContext.config.globalProperties.$templates"
-      v-show="
-        Array.isArray(app?.appContext.config.globalProperties.$templates) &&
-        app.appContext.config.globalProperties.$templates.length > 0
-      "
+      v-for="template in $templates.value"
+      v-show="Array.isArray($templates.value) && $templates.value.length > 0"
+      :key="template"
     >
       {{ template }}
     </option>
@@ -71,7 +69,7 @@
     id="action-button"
     @click="
       () => {
-        uiClient
+        $uiClient
           .addChargingStations(state.template, state.numberOfStations, {
             supervisionUrls: state.supervisionUrl.length > 0 ? state.supervisionUrl : undefined,
             autoStart: convertToBoolean(state.autoStart),
@@ -97,12 +95,13 @@
 </template>
 
 <script setup lang="ts">
-import { getCurrentInstance, ref } from 'vue'
-import { useToast } from 'vue-toast-notification'
+import { getCurrentInstance, ref, watch } from 'vue'
+
 import Button from '@/components/buttons/Button.vue'
-import { convertToBoolean } from '@/composables'
+import { convertToBoolean, randomUUID } from '@/composables'
 
 const state = ref<{
+  renderTemplates: `${string}-${string}-${string}-${string}-${string}`
   template: string
   numberOfStations: number
   supervisionUrl: string
@@ -111,6 +110,7 @@ const state = ref<{
   ocppStrictCompliance: boolean
   enableStatistics: boolean
 }>({
+  renderTemplates: randomUUID(),
   template: '',
   numberOfStations: 1,
   supervisionUrl: '',
@@ -120,10 +120,9 @@ const state = ref<{
   enableStatistics: false
 })
 
-const app = getCurrentInstance()
-const uiClient = app?.appContext.config.globalProperties.$uiClient
-
-const $toast = useToast()
+watch(getCurrentInstance()!.appContext.config.globalProperties.$templates, () => {
+  state.value.renderTemplates = randomUUID()
+})
 </script>
 
 <style>

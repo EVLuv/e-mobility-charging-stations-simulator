@@ -1,6 +1,6 @@
-import type { IncomingRequestCommand, RequestCommand } from './ocpp/Requests.js'
 import type { CircularArray } from '../utils/index.js'
 import type { WorkerData } from '../worker/index.js'
+import type { IncomingRequestCommand, RequestCommand } from './ocpp/Requests.js'
 
 export interface TimestampedData {
   timestamp: number
@@ -23,16 +23,16 @@ export type StatisticsData = Partial<{
   stdDevTimeMeasurement: number
 }>
 
-export type Statistics = {
+export interface Statistics extends WorkerData {
   id: string
   name: string
   uri: string
   createdAt: Date
   updatedAt?: Date
   statisticsData: Map<string | RequestCommand | IncomingRequestCommand, StatisticsData>
-} & WorkerData
+}
 
-export interface InternalTemplateStatistics {
+export interface TemplateStatistics {
   configured: number
   added: number
   started: number

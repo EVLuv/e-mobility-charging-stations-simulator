@@ -1,6 +1,11 @@
 <!-- markdownlint-disable-file MD033 MD024 -->
+<div align="center">
 
-# [e-mobility charging stations simulator](https://github.com/sap/e-mobility-charging-stations-simulator)
+# [e-Mobility charging stations simulator](https://github.com/sap/e-mobility-charging-stations-simulator)
+
+</div>
+
+<div align="center">
 
 [![GitHub Clones](https://img.shields.io/badge/dynamic/json?color=brightgreen&label=Clone&query=count&url=https://gist.githubusercontent.com/jerome-benoit/c7c669b881d5b27dc0b44a639504ff93/raw/clone.json&logo=github)](https://github.com/SAP/e-mobility-charging-stations-simulator/graphs/traffic)
 [![GitHub commit activity (main)](https://img.shields.io/github/commit-activity/m/SAP/e-mobility-charging-stations-simulator/main?color=brightgreen&logo=github)](https://github.com/SAP/e-mobility-charging-stations-simulator/graphs/commit-activity)
@@ -8,15 +13,46 @@
 [![REUSE status](https://api.reuse.software/badge/github.com/SAP/e-mobility-charging-stations-simulator)](https://api.reuse.software/info/github.com/SAP/e-mobility-charging-stations-simulator)
 [![Javascript Standard Style Guide](<https://badgen.net/static/code style/standard/green>)](https://standardjs.com)
 
-## Summary
+</div>
 
 Simple [node.js](https://nodejs.org/) software to simulate and scale a set of charging stations based on the OCPP-J protocol as part of [SAP e-Mobility](https://www.sap.com/products/scm/e-mobility.html) solution.
 
-## Prerequisites
+## Table of contents
+
+- [Installation](#installation)
+  - [Prerequisites](#prerequisites)
+    - [Windows](#windows)
+    - [MacOSX](#macosx)
+    - [GNU/Linux](#gnulinux)
+  - [Dependencies](#dependencies)
+- [Initial configuration](#initial-configuration)
+- [Start simulator](#start-simulator)
+- [Start Web UI](#start-web-ui)
+- [Configuration files syntax](#configuration-files-syntax)
+  - [Charging stations simulator configuration](#charging-stations-simulator-configuration)
+  - [Charging station configuration template](#charging-station-configuration-template)
+  - [Charging station configuration](#charging-station-configuration)
+- [Docker](#docker)
+- [OCPP-J commands supported](#ocpp-j-commands-supported)
+  - [Version 1.6](#version-16)
+  - [Version 2.x.x](#version-2xx)
+- [OCPP-J standard parameters supported](#ocpp-j-standard-parameters-supported)
+  - [Version 1.6](#version-16-1)
+  - [Version 2.x.x](#version-2xx-1)
+- [UI Protocol](#ui-protocol)
+  - [Websocket Protocol](#websocket-protocol)
+  - [HTTP Protocol](#http-protocol)
+- [Support, Feedback, Contributing](#support-feedback-contributing)
+- [Code of Conduct](#code-of-conduct)
+- [Licensing](#licensing)
+
+## Installation
+
+### Prerequisites
 
 Install the [node.js](https://nodejs.org/) current LTS or superior version runtime environment:
 
-### Windows
+#### Windows
 
 - [Chocolatey](https://chocolatey.org/):
 
@@ -24,7 +60,7 @@ Install the [node.js](https://nodejs.org/) current LTS or superior version runti
 choco install -y nodejs
 ```
 
-### MacOSX
+#### MacOSX
 
 - [Homebrew](https://brew.sh/):
 
@@ -32,11 +68,11 @@ choco install -y nodejs
 brew install node
 ```
 
-### GNU/Linux
+#### GNU/Linux
 
 - [NodeSource](https://github.com/nodesource/distributions) Node.js Binary Distributions for all supported versions.
 
-## Installation
+#### Dependencies
 
 Enable corepack if not already done and install latest pnpm version:
 
@@ -56,11 +92,11 @@ pnpm install
 Copy the configuration template file [src/assets/config-template.json](./src/assets/config-template.json) to [src/assets/config.json](./src/assets/config.json).  
 Copy the RFID tags template file [src/assets/idtags-template.json](./src/assets/idtags-template.json) to [src/assets/idtags.json](./src/assets/idtags.json).
 
-Tweak them to your needs by following the section [configuration files syntax](./README.md#configuration-files-syntax): OCPP server supervision URL(s), charging station templates, etc.
+Tweak them to your needs by following the section [configuration files syntax](#configuration-files-syntax): OCPP server supervision URL(s), charging station templates, etc.
 
-## Start
+## Start simulator
 
-To start the program, run: `pnpm start`.
+Run: `pnpm start`.
 
 ## Start Web UI
 
@@ -68,7 +104,7 @@ See Web UI [README.md](./ui/web/README.md) for more information.
 
 ## Configuration files syntax
 
-All configuration files are in the JSON standard format.
+All configuration files are using the JSON standard syntax.
 
 **Configuration files locations**:
 
@@ -497,7 +533,7 @@ All kind of OCPP parameters are supported in charging station configuration or c
 
 ### Version 2.x.x
 
-## UI protocol
+## UI Protocol
 
 Protocol to control the simulator via a Websocket or HTTP server:
 
@@ -505,7 +541,7 @@ Protocol to control the simulator via a Websocket or HTTP server:
 sequenceDiagram
 Client->>UI Server: request
 UI Server->>Client: response
-Note over UI Server,Client: Transport protocol: HTTP, Websocket
+Note over UI Server,Client: HTTP or Websocket
 ```
 
 ### Websocket Protocol
@@ -530,6 +566,22 @@ To learn how to use the Websocket protocol to pilot the simulator, an [Insomnia]
 Set the Websocket header _Sec-Websocket-Protocol_ to `ui0.0.1`.
 
 ##### Procedures
+
+###### Simulator State
+
+- Request:  
+  `ProcedureName`: 'simulatorState'  
+  `PDU`: {}
+
+- Response:  
+  `PDU`: {  
+   `status`: 'success' | 'failure',  
+   `state`: {  
+   `version`: string,  
+   `started`: boolean,  
+   `templateStatistics`: Record<string, TemplateStatistics>  
+   }  
+  }
 
 ###### Start Simulator
 
@@ -630,7 +682,7 @@ Set the Websocket header _Sec-Websocket-Protocol_ to `ui0.0.1`.
 
 - Response:  
   `PDU`: {  
-   `status`: 'success' | 'failure'  
+   `status`: 'success' | 'failure',  
    `performanceStatistics`: Statistics[]  
   }
 

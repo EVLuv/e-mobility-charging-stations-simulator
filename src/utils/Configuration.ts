@@ -4,18 +4,8 @@ import { env } from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 import chalk from 'chalk'
-import { mergeDeepRight } from 'rambda'
+import { mergeDeepRight, once } from 'rambda'
 
-import {
-  buildPerformanceUriFilePath,
-  checkWorkerElementsPerWorker,
-  checkWorkerProcessType,
-  getDefaultPerformanceStorageUri,
-  handleFileException,
-  logPrefix
-} from './ConfigurationUtils.js'
-import { Constants } from './Constants.js'
-import { hasOwnProp, isCFEnvironment, once } from './Utils.js'
 import {
   ApplicationProtocol,
   ApplicationProtocolVersion,
@@ -37,6 +27,16 @@ import {
   DEFAULT_WORKER_START_DELAY,
   WorkerProcessType
 } from '../worker/index.js'
+import {
+  buildPerformanceUriFilePath,
+  checkWorkerElementsPerWorker,
+  checkWorkerProcessType,
+  getDefaultPerformanceStorageUri,
+  handleFileException,
+  logPrefix
+} from './ConfigurationUtils.js'
+import { Constants } from './Constants.js'
+import { hasOwnProp, isCFEnvironment } from './Utils.js'
 
 type ConfigurationSectionType =
   | LogConfiguration
@@ -82,8 +82,7 @@ export class Configuration {
 
   public static getStationTemplateUrls (): StationTemplateUrl[] | undefined {
     const checkDeprecatedConfigurationKeysOnce = once(
-      Configuration.checkDeprecatedConfigurationKeys.bind(Configuration),
-      Configuration
+      Configuration.checkDeprecatedConfigurationKeys.bind(Configuration)
     )
     checkDeprecatedConfigurationKeysOnce()
     return Configuration.getConfigurationData()?.stationTemplateUrls
@@ -567,7 +566,7 @@ export class Configuration {
           event === 'change'
         ) {
           Configuration.configurationFileReloading = true
-          const consoleWarnOnce = once(console.warn, this)
+          const consoleWarnOnce = once(console.warn)
           consoleWarnOnce(
             `${chalk.green(logPrefix())} ${chalk.yellow(
               `${FileType.Configuration} ${this.configurationFile} file have changed, reload`

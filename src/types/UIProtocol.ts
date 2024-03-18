@@ -19,11 +19,18 @@ export enum ProtocolVersion {
   '0.0.1' = '0.0.1'
 }
 
-export type ProtocolRequest = [string, ProcedureName, RequestPayload]
-export type ProtocolResponse = [string, ResponsePayload]
+export type ProtocolRequest = [
+  `${string}-${string}-${string}-${string}-${string}`,
+  ProcedureName,
+  RequestPayload
+]
+export type ProtocolResponse = [
+  `${string}-${string}-${string}-${string}-${string}`,
+  ResponsePayload
+]
 
 export type ProtocolRequestHandler = (
-  uuid?: string,
+  uuid?: `${string}-${string}-${string}-${string}-${string}`,
   procedureName?: ProcedureName,
   payload?: RequestPayload
 ) => undefined | Promise<undefined> | ResponsePayload | Promise<ResponsePayload>
@@ -71,17 +78,4 @@ export interface ResponsePayload extends JsonObject {
   hashIdsSucceeded?: string[]
   hashIdsFailed?: string[]
   responsesFailed?: BroadcastChannelResponsePayload[]
-}
-
-export interface TemplateStatistics extends JsonObject {
-  configured: number
-  added: number
-  started: number
-  indexes: number[]
-}
-
-export interface SimulatorState extends JsonObject {
-  version: string
-  started: boolean
-  templateStatistics: Record<string, TemplateStatistics>
 }

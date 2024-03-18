@@ -66,9 +66,9 @@
           </tr>
         </thead>
         <tbody id="connectors-table__body">
-          <!-- eslint-disable-next-line vue/valid-v-for -->
           <CSConnector
             v-for="(connector, index) in getConnectorStatuses()"
+            :key="index + 1"
             :hash-id="chargingStation.stationInfo.hashId"
             :charging-station-id="chargingStation.stationInfo.chargingStationId"
             :connector-id="index + 1"
@@ -83,12 +83,13 @@
 </template>
 
 <script setup lang="ts">
-import { getCurrentInstance } from 'vue'
 import { useToast } from 'vue-toast-notification'
-import CSConnector from '@/components/charging-stations/CSConnector.vue'
+
 import Button from '@/components/buttons/Button.vue'
-import type { ChargingStationData, ConnectorStatus, Status } from '@/types'
 import ToggleButton from '@/components/buttons/ToggleButton.vue'
+import CSConnector from '@/components/charging-stations/CSConnector.vue'
+import { useUIClient } from '@/composables'
+import type { ChargingStationData, ConnectorStatus, Status } from '@/types'
 
 const props = defineProps<{
   chargingStation: ChargingStationData
@@ -133,7 +134,7 @@ const getWSState = (): string => {
   }
 }
 
-const uiClient = getCurrentInstance()?.appContext.config.globalProperties.$uiClient
+const uiClient = useUIClient()
 
 const $toast = useToast()
 
@@ -145,7 +146,7 @@ const startChargingStation = (): void => {
     })
     .catch((error: Error) => {
       $toast.error('Error at starting charging station')
-      console.error('Error at starting charging station', error)
+      console.error('Error at starting charging station:', error)
     })
 }
 const stopChargingStation = (): void => {
@@ -156,7 +157,7 @@ const stopChargingStation = (): void => {
     })
     .catch((error: Error) => {
       $toast.error('Error at stopping charging station')
-      console.error('Error at stopping charging station', error)
+      console.error('Error at stopping charging station:', error)
     })
 }
 const openConnection = (): void => {
@@ -167,7 +168,7 @@ const openConnection = (): void => {
     })
     .catch((error: Error) => {
       $toast.error('Error at opening connection')
-      console.error('Error at opening connection', error)
+      console.error('Error at opening connection:', error)
     })
 }
 const closeConnection = (): void => {
@@ -178,7 +179,7 @@ const closeConnection = (): void => {
     })
     .catch((error: Error) => {
       $toast.error('Error at closing connection')
-      console.error('Error at closing connection', error)
+      console.error('Error at closing connection:', error)
     })
 }
 const deleteChargingStation = (): void => {
@@ -189,7 +190,7 @@ const deleteChargingStation = (): void => {
     })
     .catch((error: Error) => {
       $toast.error('Error at deleting charging station')
-      console.error('Error at deleting charging station', error)
+      console.error('Error at deleting charging station:', error)
     })
 }
 </script>

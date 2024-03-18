@@ -1,8 +1,9 @@
 import { LRUMapWithDelete as LRUCache } from 'mnemonist'
+import { isEmpty } from 'rambda'
 
-import { Bootstrap } from './Bootstrap.js'
 import type { ChargingStationConfiguration, ChargingStationTemplate } from '../types/index.js'
-import { isEmptyObject, isNotEmptyArray, isNotEmptyString } from '../utils/index.js'
+import { isNotEmptyArray, isNotEmptyString } from '../utils/index.js'
+import { Bootstrap } from './Bootstrap.js'
 
 enum CacheType {
   chargingStationTemplate = 'chargingStationTemplate',
@@ -116,8 +117,8 @@ export class SharedLRUCache {
       chargingStationConfiguration.automaticTransactionGenerator != null &&
       chargingStationConfiguration.configurationHash != null &&
       isNotEmptyArray(chargingStationConfiguration.configurationKey) &&
-      !isEmptyObject(chargingStationConfiguration.stationInfo) &&
-      !isEmptyObject(chargingStationConfiguration.automaticTransactionGenerator) &&
+      !isEmpty(chargingStationConfiguration.stationInfo) &&
+      !isEmpty(chargingStationConfiguration.automaticTransactionGenerator) &&
       isNotEmptyString(chargingStationConfiguration.configurationHash)
     )
   }

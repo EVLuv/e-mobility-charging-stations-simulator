@@ -1,26 +1,26 @@
 // Partial Copyright Jerome Benoit. 2021-2024. All Rights Reserved.
 
+import { randomInt } from 'node:crypto'
 import { createWriteStream, readdirSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
-import { URL, fileURLToPath } from 'node:url'
+import { dirname, extname, join, resolve } from 'node:path'
+import { fileURLToPath, URL } from 'node:url'
 
 import type { ValidateFunction } from 'ajv'
 import { Client, type FTPResponse } from 'basic-ftp'
 import {
-  type Interval,
   addSeconds,
   differenceInSeconds,
+  type Interval,
   isDate,
   secondsToMilliseconds
 } from 'date-fns'
 import { maxTime } from 'date-fns/constants'
+import { isEmpty } from 'rambda'
 import { create } from 'tar'
 
-import { OCPP16Constants } from './OCPP16Constants.js'
-import { OCPP16ServiceUtils } from './OCPP16ServiceUtils.js'
 import {
-  type ChargingStation,
   canProceedChargingProfile,
+  type ChargingStation,
   checkChargingStation,
   getConfigurationKey,
   getConnectorChargingProfiles,
@@ -32,6 +32,7 @@ import { OCPPError } from '../../../exception/index.js'
 import {
   type ChangeConfigurationRequest,
   type ChangeConfigurationResponse,
+  ConfigurationSection,
   ErrorType,
   type GenericResponse,
   GenericStatus,
@@ -41,6 +42,7 @@ import {
   type GetDiagnosticsResponse,
   type IncomingRequestHandler,
   type JsonType,
+  type LogConfiguration,
   OCPP16AuthorizationStatus,
   OCPP16AvailabilityType,
   type OCPP16BootNotificationRequest,
@@ -98,19 +100,20 @@ import {
   type UnlockConnectorResponse
 } from '../../../types/index.js'
 import {
+  Configuration,
   Constants,
   convertToDate,
   convertToInt,
   formatDurationMilliSeconds,
-  getRandomInteger,
   isAsyncFunction,
-  isEmptyArray,
   isNotEmptyArray,
   isNotEmptyString,
   logger,
   sleep
 } from '../../../utils/index.js'
 import { OCPPIncomingRequestService } from '../OCPPIncomingRequestService.js'
+import { OCPP16Constants } from './OCPP16Constants.js'
+import { OCPP16ServiceUtils } from './OCPP16ServiceUtils.js'
 
 const moduleName = 'OCPP16IncomingRequestService'
 
@@ -940,8 +943,8 @@ export class OCPP16IncomingRequestService extends OCPPIncomingRequestService {
     }
     const connectorStatus = chargingStation.getConnectorStatus(connectorId)
     if (
-      isEmptyArray(connectorStatus?.chargingProfiles) &&
-      isEmptyArray(chargingStation.getConnectorStatus(0)?.chargingProfiles)
+      isEmpty(connectorStatus?.chargingProfiles) &&
+      isEmpty(chargingStation.getConnectorStatus(0)?.chargingProfiles)
     ) {
       return OCPP16Constants.OCPP_RESPONSE_REJECTED
     }
@@ -1343,7 +1346,7 @@ export class OCPP16IncomingRequestService extends OCPPIncomingRequestService {
       chargingStation.stationInfo?.firmwareUpgrade?.failureStatus ===
       OCPP16FirmwareStatus.DownloadFailed
     ) {
-      await sleep(secondsToMilliseconds(getRandomInteger(maxDelay, minDelay)))
+      await sleep(secondsToMilliseconds(randomInt(minDelay, maxDelay)))
       await chargingStation.ocppRequestService.requestHandler<
       OCPP16FirmwareStatusNotificationRequest,
       OCPP16FirmwareStatusNotificationResponse
@@ -1354,7 +1357,7 @@ export class OCPP16IncomingRequestService extends OCPPIncomingRequestService {
         chargingStation.stationInfo.firmwareUpgrade.failureStatus
       return
     }
-    await sleep(secondsToMilliseconds(getRandomInteger(maxDelay, minDelay)))
+    await sleep(secondsToMilliseconds(randomInt(minDelay, maxDelay)))
     await chargingStation.ocppRequestService.requestHandler<
     OCPP16FirmwareStatusNotificationRequest,
     OCPP16FirmwareStatusNotificationResponse
@@ -1410,8 +1413,7 @@ export class OCPP16IncomingRequestService extends OCPPIncomingRequestService {
         transactionsStarted = false
       }
     } while (transactionsStarted)
-    !wasTransactionsStarted &&
-      (await sleep(secondsToMilliseconds(getRandomInteger(maxDelay, minDelay))))
+    !wasTransactionsStarted && (await sleep(secondsToMilliseconds(randomInt(minDelay, maxDelay))))
     if (!checkChargingStation(chargingStation, chargingStation.logPrefix())) {
       return
     }
@@ -1427,7 +1429,7 @@ export class OCPP16IncomingRequestService extends OCPPIncomingRequestService {
       chargingStation.stationInfo?.firmwareUpgrade?.failureStatus ===
       OCPP16FirmwareStatus.InstallationFailed
     ) {
-      await sleep(secondsToMilliseconds(getRandomInteger(maxDelay, minDelay)))
+      await sleep(secondsToMilliseconds(randomInt(minDelay, maxDelay)))
       await chargingStation.ocppRequestService.requestHandler<
       OCPP16FirmwareStatusNotificationRequest,
       OCPP16FirmwareStatusNotificationResponse
@@ -1439,7 +1441,7 @@ export class OCPP16IncomingRequestService extends OCPPIncomingRequestService {
       return
     }
     if (chargingStation.stationInfo?.firmwareUpgrade?.reset === true) {
-      await sleep(secondsToMilliseconds(getRandomInteger(maxDelay, minDelay)))
+      await sleep(secondsToMilliseconds(randomInt(minDelay, maxDelay)))
       await chargingStation.reset(OCPP16StopTransactionReason.REBOOT)
     }
   }
@@ -1465,9 +1467,14 @@ export class OCPP16IncomingRequestService extends OCPPIncomingRequestService {
     if (uri.protocol.startsWith('ftp:')) {
       let ftpClient: Client | undefined
       try {
-        const logFiles = readdirSync(resolve(dirname(fileURLToPath(import.meta.url)), '../logs'))
-          .filter(file => file.endsWith('.log'))
-          .map(file => join('./logs', file))
+        const logConfiguration = Configuration.getConfigurationSection<LogConfiguration>(
+          ConfigurationSection.log
+        )
+        const logFiles = readdirSync(resolve(dirname(fileURLToPath(import.meta.url)), '../'))
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          .filter(file => file.endsWith(extname(logConfiguration.file!)))
+          // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+          .map(file => join(dirname(logConfiguration.file!), file))
         const diagnosticsArchive = `${chargingStation.stationInfo?.chargingStationId}_logs.tar.gz`
         create({ gzip: true }, logFiles).pipe(createWriteStream(diagnosticsArchive))
         ftpClient = new Client()

@@ -1,18 +1,15 @@
 // Partial Copyright Jerome Benoit. 2021-2024. All Rights Reserved.
 
 import { EventEmitter } from 'node:events'
-import { dirname, extname, join, parse } from 'node:path'
+import { dirname, extname, join } from 'node:path'
 import process, { exit } from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { isMainThread } from 'node:worker_threads'
-import type { Worker } from 'worker_threads'
 
 import chalk from 'chalk'
-import { type MessageHandler, availableParallelism } from 'poolifier'
+import { availableParallelism, type MessageHandler } from 'poolifier'
+import type { Worker } from 'worker_threads'
 
-import { waitChargingStationEvents } from './Helpers.js'
-import type { AbstractUIServer } from './ui-server/AbstractUIServer.js'
-import { UIServerFactory } from './ui-server/UIServerFactory.js'
 import { version } from '../../package.json'
 import { BaseError } from '../exception/index.js'
 import { type Storage, StorageFactory } from '../performance/index.js'
@@ -25,28 +22,30 @@ import {
   type ChargingStationWorkerMessageData,
   ChargingStationWorkerMessageEvents,
   ConfigurationSection,
-  type InternalTemplateStatistics,
   ProcedureName,
   type SimulatorState,
   type Statistics,
   type StorageConfiguration,
+  type TemplateStatistics,
   type UIServerConfiguration,
   type WorkerConfiguration
 } from '../types/index.js'
 import {
   Configuration,
   Constants,
-  buildTemplateStatisticsPayload,
   formatDurationMilliSeconds,
   generateUUID,
   handleUncaughtException,
   handleUnhandledRejection,
   isAsyncFunction,
   isNotEmptyArray,
-  logPrefix,
-  logger
+  logger,
+  logPrefix
 } from '../utils/index.js'
 import { type WorkerAbstract, WorkerFactory } from '../worker/index.js'
+import { buildTemplateName, waitChargingStationEvents } from './Helpers.js'
+import type { AbstractUIServer } from './ui-server/AbstractUIServer.js'
+import { UIServerFactory } from './ui-server/UIServerFactory.js'
 
 const moduleName = 'Bootstrap'
 
@@ -63,7 +62,7 @@ export class Bootstrap extends EventEmitter {
   private workerImplementation?: WorkerAbstract<ChargingStationWorkerData>
   private readonly uiServer: AbstractUIServer
   private storage?: Storage
-  private readonly templateStatistics: Map<string, InternalTemplateStatistics>
+  private readonly templateStatistics: Map<string, TemplateStatistics>
   private readonly version: string = version
   private initializedCounters: boolean
   private started: boolean
@@ -86,7 +85,7 @@ export class Bootstrap extends EventEmitter {
     this.uiServer = UIServerFactory.getUIServerImplementation(
       Configuration.getConfigurationSection<UIServerConfiguration>(ConfigurationSection.uiServer)
     )
-    this.templateStatistics = new Map<string, InternalTemplateStatistics>()
+    this.templateStatistics = new Map<string, TemplateStatistics>()
     this.initializedCounters = false
     this.initializeCounters()
     Configuration.configurationChangeCallback = async () => {
@@ -118,7 +117,7 @@ export class Bootstrap extends EventEmitter {
     return {
       version: this.version,
       started: this.started,
-      templateStatistics: buildTemplateStatisticsPayload(this.templateStatistics)
+      templateStatistics: this.templateStatistics
     }
   }
 
@@ -208,9 +207,7 @@ export class Bootstrap extends EventEmitter {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         for (const stationTemplateUrl of Configuration.getStationTemplateUrls()!) {
           try {
-            const nbStations =
-              this.templateStatistics.get(parse(stationTemplateUrl.file).name)?.configured ??
-              stationTemplateUrl.numberOfStations
+            const nbStations = stationTemplateUrl.numberOfStations
             for (let index = 1; index <= nbStations; index++) {
               await this.addChargingStation(index, stationTemplateUrl.file)
             }
@@ -495,7 +492,7 @@ export class Bootstrap extends EventEmitter {
       const stationTemplateUrls = Configuration.getStationTemplateUrls()!
       if (isNotEmptyArray(stationTemplateUrls)) {
         for (const stationTemplateUrl of stationTemplateUrls) {
-          const templateName = parse(stationTemplateUrl.file).name
+          const templateName = buildTemplateName(stationTemplateUrl.file)
           this.templateStatistics.set(templateName, {
             configured: stationTemplateUrl.numberOfStations,
             added: 0,
@@ -536,21 +533,26 @@ export class Bootstrap extends EventEmitter {
 
   public async addChargingStation (
     index: number,
-    stationTemplateFile: string,
+    templateFile: string,
     options?: ChargingStationOptions
   ): Promise<void> {
+    if (!this.started && !this.starting) {
+      throw new BaseError(
+        'Cannot add charging station while the charging stations simulator is not started'
+      )
+    }
     await this.workerImplementation?.addElement({
       index,
       templateFile: join(
         dirname(fileURLToPath(import.meta.url)),
         'assets',
         'station-templates',
-        stationTemplateFile
+        templateFile
       ),
       options
     })
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    const templateStatistics = this.templateStatistics.get(parse(stationTemplateFile).name)!
+    const templateStatistics = this.templateStatistics.get(buildTemplateName(templateFile))!
     ++templateStatistics.added
     templateStatistics.indexes.add(index)
   }
