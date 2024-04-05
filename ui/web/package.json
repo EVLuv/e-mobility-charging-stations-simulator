@@ -8,12 +8,12 @@
     "pnpm": ">=8.6.0"
   },
   "volta": {
-    "node": "20.11.1",
-    "pnpm": "8.15.5"
+    "node": "20.12.1",
+    "pnpm": "8.15.6"
   },
+  "packageManager": "pnpm@8.15.6",
   "type": "module",
   "scripts": {
-    "preinstall": "npx --yes only-allow pnpm",
     "build": "vite build",
     "preview": "pnpm build && vite preview",
     "start": "pnpm build && node start.js",
@@ -34,12 +34,12 @@
     "vue-toast-notification": "^3.1.2"
   },
   "devDependencies": {
-    "@rushstack/eslint-patch": "^1.7.2",
-    "@tsconfig/node20": "^20.1.2",
+    "@rushstack/eslint-patch": "^1.10.1",
+    "@tsconfig/node20": "^20.1.4",
     "@types/jsdom": "^21.1.6",
-    "@types/node": "^20.11.28",
-    "@typescript-eslint/eslint-plugin": "^7.2.0",
-    "@typescript-eslint/parser": "^7.2.0",
+    "@types/node": "^20.12.4",
+    "@typescript-eslint/eslint-plugin": "^7.5.0",
+    "@typescript-eslint/parser": "^7.5.0",
     "@vitejs/plugin-vue": "^5.0.4",
     "@vitejs/plugin-vue-jsx": "^3.1.0",
     "@vitest/coverage-v8": "^1.4.0",
@@ -53,12 +53,12 @@
     "eslint-import-resolver-typescript": "^3.6.1",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-simple-import-sort": "^12.0.0",
-    "eslint-plugin-vue": "^9.23.0",
+    "eslint-plugin-vue": "^9.24.0",
     "jsdom": "^24.0.0",
     "prettier": "^3.2.5",
     "rimraf": "^5.0.5",
-    "typescript": "~5.4.2",
-    "vite": "^5.1.6",
+    "typescript": "~5.4.4",
+    "vite": "^5.2.8",
     "vitest": "^1.4.0"
   },
   "_id": "webui@0.3.0"

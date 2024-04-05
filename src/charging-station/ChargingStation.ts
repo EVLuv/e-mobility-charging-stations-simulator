@@ -228,7 +228,7 @@ export class ChargingStation extends EventEmitter {
         this.wsConnectionRetried
           ? true
           : this.getAutomaticTransactionGeneratorConfiguration()?.stopAbsoluteDuration
-      ).catch(error => {
+      ).catch((error: unknown) => {
         logger.error(`${this.logPrefix()} Error while starting the message sequence:`, error)
       })
       this.wsConnectionRetried = false
@@ -286,7 +286,7 @@ export class ChargingStation extends EventEmitter {
         readFileSync(this.templateFile, 'utf8')
       ) as ChargingStationTemplate
     } catch {
-      stationTemplate = undefined
+      // Ignore
     }
     return logPrefix(` ${getChargingStationId(this.index, stationTemplate)} |`)
   }
@@ -552,7 +552,7 @@ export class ChargingStation extends EventEmitter {
       this.heartbeatSetInterval = setInterval(() => {
         this.ocppRequestService
           .requestHandler<HeartbeatRequest, HeartbeatResponse>(this, RequestCommand.HEARTBEAT)
-          .catch(error => {
+          .catch((error: unknown) => {
             logger.error(
               `${this.logPrefix()} Error while sending '${RequestCommand.HEARTBEAT}':`,
               error
@@ -637,7 +637,7 @@ export class ChargingStation extends EventEmitter {
             meterValue: [meterValue]
           }
         )
-          .catch(error => {
+          .catch((error: unknown) => {
             logger.error(
               `${this.logPrefix()} Error while sending '${RequestCommand.METER_VALUES}':`,
               error
@@ -841,7 +841,7 @@ export class ChargingStation extends EventEmitter {
     this.wsConnection.on('close', this.onClose.bind(this))
     // Handle WebSocket open
     this.wsConnection.on('open', () => {
-      this.onOpen().catch(error =>
+      this.onOpen().catch((error: unknown) =>
         logger.error(`${this.logPrefix()} Error while opening WebSocket connection:`, error)
       )
     })
@@ -1191,15 +1191,6 @@ export class ChargingStation extends EventEmitter {
         } does not match firmware version pattern '${stationInfo.firmwareVersionPattern}'`
       )
     }
-    stationInfo.firmwareUpgrade = mergeDeepRight(
-      {
-        versionUpgrade: {
-          step: 1
-        },
-        reset: true
-      },
-      stationTemplate.firmwareUpgrade ?? {}
-    )
     if (stationTemplate.resetTime != null) {
       stationInfo.resetTime = secondsToMilliseconds(stationTemplate.resetTime)
     }
@@ -1236,6 +1227,7 @@ export class ChargingStation extends EventEmitter {
     const stationInfoFromFile = this.getStationInfoFromFile(
       stationInfoFromTemplate.stationInfoPersistentConfiguration
     )
+    let stationInfo: ChargingStationInfo
     // Priority:
     // 1. charging station info from template
     // 2. charging station info from configuration file
@@ -1243,19 +1235,14 @@ export class ChargingStation extends EventEmitter {
       stationInfoFromFile != null &&
       stationInfoFromFile.templateHash === stationInfoFromTemplate.templateHash
     ) {
-      return setChargingStationOptions(
-        { ...Constants.DEFAULT_STATION_INFO, ...stationInfoFromFile },
-        options
-      )
+      stationInfo = stationInfoFromFile
+    } else {
+      stationInfo = stationInfoFromTemplate
+      stationInfoFromFile != null &&
+        propagateSerialNumber(this.getTemplateFromFile(), stationInfoFromFile, stationInfo)
     }
-    stationInfoFromFile != null &&
-      propagateSerialNumber(
-        this.getTemplateFromFile(),
-        stationInfoFromFile,
-        stationInfoFromTemplate
-      )
     return setChargingStationOptions(
-      { ...Constants.DEFAULT_STATION_INFO, ...stationInfoFromTemplate },
+      mergeDeepRight(Constants.DEFAULT_STATION_INFO, stationInfo),
       options
     )
   }
@@ -1766,7 +1753,7 @@ export class ChargingStation extends EventEmitter {
             this.sharedLRUCache.deleteChargingStationConfiguration(this.configurationFileHash)
             this.sharedLRUCache.setChargingStationConfiguration(configurationData)
             this.configurationFileHash = configurationHash
-          }).catch(error => {
+          }).catch((error: unknown) => {
             handleFileException(
               this.configurationFile,
               FileType.ChargingStationConfiguration,
@@ -1910,7 +1897,9 @@ export class ChargingStation extends EventEmitter {
             .then(() => {
               this.emit(ChargingStationEvents.updated)
             })
-            .catch(error => logger.error(`${this.logPrefix()} Error while reconnecting:`, error))
+            .catch((error: unknown) =>
+              logger.error(`${this.logPrefix()} Error while reconnecting:`, error)
+            )
         break
     }
   }

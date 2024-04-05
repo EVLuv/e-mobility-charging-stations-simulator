@@ -2,6 +2,7 @@ import { BaseError, type OCPPError } from '../../../exception/index.js'
 import {
   BroadcastChannelProcedureName,
   type BroadcastChannelRequestPayload,
+  type ChargingStationInfo,
   type ChargingStationOptions,
   ConfigurationSection,
   type JsonObject,
@@ -22,6 +23,12 @@ import { UIServiceWorkerBroadcastChannel } from '../../broadcast-channel/UIServi
 import type { AbstractUIServer } from '../AbstractUIServer.js'
 
 const moduleName = 'AbstractUIService'
+
+interface AddChargingStationsRequestPayload extends RequestPayload {
+  template: string
+  numberOfStations: number
+  options?: ChargingStationOptions
+}
 
 export abstract class AbstractUIService {
   protected static readonly ProcedureNameToBroadCastChannelProcedureNameMapping = new Map<
@@ -251,11 +258,8 @@ export abstract class AbstractUIService {
     _procedureName?: ProcedureName,
     requestPayload?: RequestPayload
   ): Promise<ResponsePayload> {
-    const { template, numberOfStations, options } = requestPayload as {
-      template: string
-      numberOfStations: number
-      options?: ChargingStationOptions
-    }
+    const { template, numberOfStations, options } =
+      requestPayload as AddChargingStationsRequestPayload
     if (!Bootstrap.getInstance().getState().started) {
       return {
         status: ResponseStatus.FAILURE,
@@ -275,24 +279,37 @@ export abstract class AbstractUIService {
         errorMessage: `Template '${template}' not found`
       } satisfies ResponsePayload
     }
+    const succeededStationInfos: ChargingStationInfo[] = []
+    const failedStationInfos: ChargingStationInfo[] = []
+    let err: Error | undefined
     for (let i = 0; i < numberOfStations; i++) {
+      let stationInfo: ChargingStationInfo | undefined
       try {
-        await Bootstrap.getInstance().addChargingStation(
+        stationInfo = await Bootstrap.getInstance().addChargingStation(
           Bootstrap.getInstance().getLastIndex(template) + 1,
           `${template}.json`,
           options
         )
+        if (stationInfo != null) {
+          succeededStationInfos.push(stationInfo)
+        }
       } catch (error) {
-        return {
-          status: ResponseStatus.FAILURE,
-          errorMessage: (error as Error).message,
-          errorStack: (error as Error).stack
-        } satisfies ResponsePayload
+        err = error as Error
+        if (stationInfo != null) {
+          failedStationInfos.push(stationInfo)
+        }
       }
     }
     return {
-      status: ResponseStatus.SUCCESS
-    }
+      status: err != null ? ResponseStatus.FAILURE : ResponseStatus.SUCCESS,
+      ...(succeededStationInfos.length > 0 && {
+        hashIdsSucceeded: succeededStationInfos.map(stationInfo => stationInfo.hashId)
+      }),
+      ...(failedStationInfos.length > 0 && {
+        hashIdsFailed: failedStationInfos.map(stationInfo => stationInfo.hashId)
+      }),
+      ...(err != null && { errorMessage: err.message, errorStack: err.stack })
+    } satisfies ResponsePayload
   }
 
   private handlePerformanceStatistics (): ResponsePayload {
@@ -313,7 +330,7 @@ export abstract class AbstractUIService {
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           ...Bootstrap.getInstance().getPerformanceStatistics()!
         ] as JsonType[]
-      }
+      } satisfies ResponsePayload
     } catch (error) {
       return {
         status: ResponseStatus.FAILURE,
