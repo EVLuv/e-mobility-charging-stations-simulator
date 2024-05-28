@@ -1538,17 +1538,22 @@ export class ChargingStation extends EventEmitter {
             ) {
               continue
             }
+
             const templateConnectorId =
               connectorId > 0 && stationTemplate.randomConnectors === true
                 ? randomInt(1, templateMaxAvailableConnectors)
                 : connectorId
+
             const connectorStatus = stationTemplate.Connectors[templateConnectorId]
+
             checkStationInfoConnectorStatus(
               templateConnectorId,
               connectorStatus,
               this.logPrefix(),
               this.templateFile
             )
+
+            console.log(`----Setting Connector Statis : ${JSON.stringify(connectorStatus)}`)
             this.connectors.set(connectorId, clone<ConnectorStatus>(connectorStatus))
           }
           initializeConnectorsMapStatus(this.connectors, this.logPrefix())

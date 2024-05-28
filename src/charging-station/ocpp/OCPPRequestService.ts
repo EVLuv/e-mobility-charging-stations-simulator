@@ -85,6 +85,8 @@ export abstract class OCPPRequestService {
     commandName: IncomingRequestCommand
   ): Promise<ResponseType> {
     try {
+      console.log('---- sendResponse ----')
+      console.log('----------------------')
       // Send response message
       return await this.internalSendMessage(
         chargingStation,
@@ -108,6 +110,8 @@ export abstract class OCPPRequestService {
     commandName: RequestCommand | IncomingRequestCommand
   ): Promise<ResponseType> {
     try {
+      console.log('---- sendError ----')
+      console.log('----------------------')
       // Send error message
       return await this.internalSendMessage(
         chargingStation,
@@ -133,6 +137,8 @@ export abstract class OCPPRequestService {
       ...defaultRequestParams,
       ...params
     }
+    console.log('---- sendMessage ----')
+    console.log('----------------------')
     try {
       return await this.internalSendMessage(
         chargingStation,
@@ -158,22 +164,35 @@ export abstract class OCPPRequestService {
     if (chargingStation.stationInfo?.ocppStrictCompliance === false) {
       return true
     }
+
     if (!this.payloadValidateFunctions.has(commandName as RequestCommand)) {
       logger.warn(
         `${chargingStation.logPrefix()} ${moduleName}.validateRequestPayload: No JSON schema found for command '${commandName}' PDU validation`
       )
       return true
     }
+
+    console.log(`--------------${commandName}-----------------`)
     const validate = this.payloadValidateFunctions.get(commandName as RequestCommand)
+
     payload = clone<T>(payload)
+    console.log(`payload: ${JSON.stringify(payload, null, 2)}`)
+
     OCPPServiceUtils.convertDateToISOString<T>(payload)
+
+    console.log(`validation is: ${validate?.(payload)}`)
+
     if (validate?.(payload) === true) {
       return true
     }
+
+    console.log(`validate: ${JSON.stringify(validate?.errors ?? {}, null, 2)}`)
+
     logger.error(
       `${chargingStation.logPrefix()} ${moduleName}.validateRequestPayload: Command '${commandName}' request PDU is invalid: %j`,
       validate?.errors
     )
+
     // OCPPError usage here is debatable: it's an error in the OCPP stack but not targeted to sendError().
     throw new OCPPError(
       OCPPServiceUtils.ajvErrorsToErrorType(validate?.errors),
@@ -253,6 +272,8 @@ export abstract class OCPPRequestService {
          * @param requestPayload -
          */
         const responseCallback = (payload: JsonType, requestPayload: JsonType): void => {
+          console.log(`~~~ responseCallback: ${JSON.stringify(payload, null, 2)}`)
+
           if (chargingStation.stationInfo?.enableStatistics === true) {
             chargingStation.performanceStatistics?.addRequestStatistic(
               commandName,
@@ -329,6 +350,10 @@ export abstract class OCPPRequestService {
         if (chargingStation.stationInfo?.enableStatistics === true) {
           chargingStation.performanceStatistics?.addRequestStatistic(commandName, messageType)
         }
+
+        console.log('Buidling message to send.......')
+        console.log(`messagePayload: ${JSON.stringify(messagePayload, null, 2)}`)
+
         const messageToSend = this.buildMessageToSend(
           chargingStation,
           messageId,
@@ -336,6 +361,7 @@ export abstract class OCPPRequestService {
           messageType,
           commandName
         )
+
         // Check if wsConnection opened
         if (chargingStation.isWebSocketConnectionOpened()) {
           const beginId = PerformanceStatistics.beginMeasure(commandName)

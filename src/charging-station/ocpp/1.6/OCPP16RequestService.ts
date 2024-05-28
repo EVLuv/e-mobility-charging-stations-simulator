@@ -171,6 +171,12 @@ export class OCPP16RequestService extends OCPPRequestService {
     params?: RequestParams
   ): Promise<ResponseType> {
     // FIXME?: add sanity checks on charging station availability, connector availability, connector status, etc.
+
+    console.log('----REQUEST HANDLER----')
+    console.log('-----------------------')
+
+    console.log(`command params: ${JSON.stringify(commandParams ?? {}, null, 2)}`)
+
     if (OCPP16ServiceUtils.isRequestCommandSupported(chargingStation, commandName)) {
       return (await this.sendMessage(
         chargingStation,

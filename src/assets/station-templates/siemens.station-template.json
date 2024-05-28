@@ -1,16 +1,23 @@
 {
   "idTagsFile": "idtags.json",
-  "baseName": "CS-SIEMENS",
+  "baseName": "bbqn0s1JfZvSBPJ5wuWc",
   "fixedName": true,
   "chargePointModel": "SIEMENSXX213",
   "chargePointVendor": "SIEMENS",
+  "supervisionUser": "bbqn0s1JfZvSBPJ5wuWc",
+  "supervisionPassword": "4aaf09c7f3f6",
   "power": 44160,
   "powerUnit": "W",
-  "numberOfConnectors": 2,
+  "numberOfConnectors": 1,
   "randomConnectors": false,
   "voltageOut": 240,
   "Configuration": {
     "configurationKey": [
+      {
+        "key": "ConnectionTimeOut",
+        "readonly": true,
+        "value": "5"
+      },
       {
         "key": "MeterValuesSampledData",
         "readonly": false,
@@ -24,7 +31,7 @@
       {
         "key": "SupportedFeatureProfiles",
         "readonly": true,
-        "value": "Core,LocalAuthListManagement,Reservation"
+        "value": "Core,LocalAuthListManagement,Reservation,RemoteTrigger"
       },
       {
         "key": "LocalAuthListEnabled",
@@ -48,32 +55,13 @@
       }
     ]
   },
-  "AutomaticTransactionGenerator": {
-    "enable": false,
-    "minDuration": 60,
-    "maxDuration": 80,
-    "minDelayBetweenTwoTransactions": 15,
-    "maxDelayBetweenTwoTransactions": 30,
-    "probabilityOfStart": 1,
-    "stopAfterHours": 0.3,
-    "requireAuthorize": true
-  },
   "Connectors": {
     "0": {},
     "1": {
-      "bootStatus": "Unavailable",
       "MeterValues": [
         {
           "unit": "Wh",
           "context": "Sample.Periodic"
-        }
-      ]
-    },
-    "2": {
-      "MeterValues": [
-        {
-          "context": "Sample.Periodic",
-          "unit": "Wh"
         }
       ]
     }

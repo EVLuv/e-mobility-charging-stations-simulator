@@ -450,6 +450,7 @@ export class OCPP16IncomingRequestService extends OCPPIncomingRequestService {
         }
       }
     )
+
     this.on(
       OCPP16IncomingRequestCommand.REMOTE_STOP_TRANSACTION,
       (
@@ -482,6 +483,7 @@ export class OCPP16IncomingRequestService extends OCPPIncomingRequestService {
         }
       }
     )
+
     this.on(
       OCPP16IncomingRequestCommand.TRIGGER_MESSAGE,
       (
@@ -565,6 +567,8 @@ export class OCPP16IncomingRequestService extends OCPPIncomingRequestService {
               }
             } else {
               for (const [id, connectorStatus] of chargingStation.connectors) {
+                console.log(`--> CS Connectors: ${JSON.stringify([id, connectorStatus])}`)
+
                 chargingStation.ocppRequestService
                   .requestHandler<
                 OCPP16StatusNotificationRequest,
@@ -1470,7 +1474,7 @@ export class OCPP16IncomingRequestService extends OCPPIncomingRequestService {
         const logConfiguration = Configuration.getConfigurationSection<LogConfiguration>(
           ConfigurationSection.log
         )
-        const logFiles = readdirSync(resolve(dirname(fileURLToPath(import.meta.url)), '../'))
+        const logFiles = readdirSync(resolve(dirname(fileURLToPath(import.meta.url)), '../logs'))
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           .filter(file => file.endsWith(extname(logConfiguration.file!)))
           // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
