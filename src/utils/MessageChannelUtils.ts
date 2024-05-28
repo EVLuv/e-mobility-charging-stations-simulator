@@ -1,9 +1,12 @@
+import type { CircularBuffer } from 'mnemonist'
+
 import type { ChargingStation } from '../charging-station/index.js'
 import {
   type ChargingStationData,
   type ChargingStationWorkerMessage,
   ChargingStationWorkerMessageEvents,
-  type Statistics
+  type Statistics,
+  type TimestampedData
 } from '../types/index.js'
 import {
   buildChargingStationAutomaticTransactionGeneratorConfiguration,
@@ -60,9 +63,22 @@ export const buildUpdatedMessage = (
 export const buildPerformanceStatisticsMessage = (
   statistics: Statistics
 ): ChargingStationWorkerMessage<Statistics> => {
+  const statisticsData = [...statistics.statisticsData].map(([key, value]) => {
+    value.measurementTimeSeries = (
+      value.measurementTimeSeries as CircularBuffer<TimestampedData>
+    ).toArray() as TimestampedData[]
+    return [key, value]
+  })
   return {
     event: ChargingStationWorkerMessageEvents.performanceStatistics,
-    data: statistics
+    data: {
+      id: statistics.id,
+      name: statistics.name,
+      uri: statistics.uri,
+      createdAt: statistics.createdAt,
+      updatedAt: statistics.updatedAt,
+      statisticsData
+    }
   }
 }
 

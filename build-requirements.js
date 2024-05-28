@@ -1,7 +1,11 @@
+import { readFileSync } from 'node:fs'
+import { exit, version } from 'node:process'
+
 import chalk from 'chalk'
+// eslint-disable-next-line n/no-unpublished-import
 import { satisfies } from 'semver'
-import packageJson from './package.json' assert { type: 'json' }
-import { version, exit } from 'node:process'
+
+const packageJson = JSON.parse(readFileSync('./package.json', 'utf8'))
 
 /**
  * Check if the current node version match the required engines version.

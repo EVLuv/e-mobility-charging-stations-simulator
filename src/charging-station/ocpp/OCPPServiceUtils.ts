@@ -18,7 +18,8 @@ import {
   type AuthorizeResponse,
   ChargePointErrorCode,
   ChargingStationEvents,
-  type ConnectorStatusEnum,
+  type ConnectorStatus,
+  ConnectorStatusEnum,
   CurrentType,
   ErrorType,
   FileType,
@@ -194,6 +195,21 @@ export const sendAndSetConnectorStatus = async (
   })
 }
 
+export const restoreConnectorStatus = async (
+  chargingStation: ChargingStation,
+  connectorId: number,
+  connectorStatus: ConnectorStatus | undefined
+): Promise<void> => {
+  if (
+    connectorStatus?.reservation != null &&
+    connectorStatus.status !== ConnectorStatusEnum.Reserved
+  ) {
+    await sendAndSetConnectorStatus(chargingStation, connectorId, ConnectorStatusEnum.Reserved)
+  } else if (connectorStatus?.status !== ConnectorStatusEnum.Available) {
+    await sendAndSetConnectorStatus(chargingStation, connectorId, ConnectorStatusEnum.Available)
+  }
+}
+
 const checkConnectorStatusTransition = (
   chargingStation: ChargingStation,
   connectorId: number,
@@ -281,7 +297,7 @@ export const buildMeterValue = (
         const socMinimumValue = socSampledValueTemplate.minimumValue ?? 0
         const socSampledValueTemplateValue = isNotEmptyString(socSampledValueTemplate.value)
           ? getRandomFloatFluctuatedRounded(
-            parseInt(socSampledValueTemplate.value),
+            Number.parseInt(socSampledValueTemplate.value),
             socSampledValueTemplate.fluctuationPercent ?? Constants.DEFAULT_FLUCTUATION_PERCENT
           )
           : randomInt(socMinimumValue, socMaximumValue)
@@ -298,7 +314,9 @@ export const buildMeterValue = (
             `${chargingStation.logPrefix()} MeterValues measurand ${
               meterValue.sampledValue[sampledValuesIndex].measurand ??
               MeterValueMeasurand.ENERGY_ACTIVE_IMPORT_REGISTER
-            }: connector id ${connectorId}, transaction id ${connector?.transactionId}, value: ${socMinimumValue}/${
+            }: connector id ${connectorId}, transaction id ${
+              connector?.transactionId
+            }, value: ${socMinimumValue}/${
               meterValue.sampledValue[sampledValuesIndex].value
             }/${socMaximumValue}`
           )
@@ -312,7 +330,7 @@ export const buildMeterValue = (
       )
       if (voltageSampledValueTemplate != null) {
         const voltageSampledValueTemplateValue = isNotEmptyString(voltageSampledValueTemplate.value)
-          ? parseInt(voltageSampledValueTemplate.value)
+          ? Number.parseInt(voltageSampledValueTemplate.value)
           : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
           chargingStation.stationInfo.voltageOut!
         const fluctuationPercent =
@@ -347,7 +365,7 @@ export const buildMeterValue = (
             const voltagePhaseLineToNeutralSampledValueTemplateValue = isNotEmptyString(
               voltagePhaseLineToNeutralSampledValueTemplate.value
             )
-              ? parseInt(voltagePhaseLineToNeutralSampledValueTemplate.value)
+              ? Number.parseInt(voltagePhaseLineToNeutralSampledValueTemplate.value)
               : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
               chargingStation.stationInfo.voltageOut!
             const fluctuationPhaseToNeutralPercent =
@@ -389,7 +407,7 @@ export const buildMeterValue = (
               const voltagePhaseLineToLineSampledValueTemplateValue = isNotEmptyString(
                 voltagePhaseLineToLineSampledValueTemplate.value
               )
-                ? parseInt(voltagePhaseLineToLineSampledValueTemplate.value)
+                ? Number.parseInt(voltagePhaseLineToLineSampledValueTemplate.value)
                 : voltagePhaseLineToLineValueRounded
               const fluctuationPhaseLineToLinePercent =
                 voltagePhaseLineToLineSampledValueTemplate.fluctuationPercent ??
@@ -630,7 +648,9 @@ export const buildMeterValue = (
             `${chargingStation.logPrefix()} MeterValues measurand ${
               meterValue.sampledValue[sampledValuesIndex].measurand ??
               MeterValueMeasurand.ENERGY_ACTIVE_IMPORT_REGISTER
-            }: connector id ${connectorId}, transaction id ${connector?.transactionId}, value: ${connectorMinimumPowerRounded}/${
+            }: connector id ${connectorId}, transaction id ${
+              connector?.transactionId
+            }, value: ${connectorMinimumPowerRounded}/${
               meterValue.sampledValue[sampledValuesIndex].value
             }/${connectorMaximumPowerRounded}`
           )
@@ -673,7 +693,9 @@ export const buildMeterValue = (
                 MeterValueMeasurand.ENERGY_ACTIVE_IMPORT_REGISTER
               }: phase ${
                 meterValue.sampledValue[sampledValuesPerPhaseIndex].phase
-              }, connector id ${connectorId}, transaction id ${connector?.transactionId}, value: ${connectorMinimumPowerPerPhaseRounded}/${
+              }, connector id ${connectorId}, transaction id ${
+                connector?.transactionId
+              }, value: ${connectorMinimumPowerPerPhaseRounded}/${
                 meterValue.sampledValue[sampledValuesPerPhaseIndex].value
               }/${connectorMaximumPowerPerPhaseRounded}`
             )
@@ -885,7 +907,9 @@ export const buildMeterValue = (
             `${chargingStation.logPrefix()} MeterValues measurand ${
               meterValue.sampledValue[sampledValuesIndex].measurand ??
               MeterValueMeasurand.ENERGY_ACTIVE_IMPORT_REGISTER
-            }: connector id ${connectorId}, transaction id ${connector?.transactionId}, value: ${connectorMinimumAmperage}/${
+            }: connector id ${connectorId}, transaction id ${
+              connector?.transactionId
+            }, value: ${connectorMinimumAmperage}/${
               meterValue.sampledValue[sampledValuesIndex].value
             }/${connectorMaximumAmperage}`
           )
@@ -920,7 +944,9 @@ export const buildMeterValue = (
                 MeterValueMeasurand.ENERGY_ACTIVE_IMPORT_REGISTER
               }: phase ${
                 meterValue.sampledValue[sampledValuesPerPhaseIndex].phase
-              }, connector id ${connectorId}, transaction id ${connector?.transactionId}, value: ${connectorMinimumAmperage}/${
+              }, connector id ${connectorId}, transaction id ${
+                connector?.transactionId
+              }, value: ${connectorMinimumAmperage}/${
                 meterValue.sampledValue[sampledValuesPerPhaseIndex].value
               }/${connectorMaximumAmperage}`
             )
@@ -993,7 +1019,9 @@ export const buildMeterValue = (
             `${chargingStation.logPrefix()} MeterValues measurand ${
               meterValue.sampledValue[sampledValuesIndex].measurand ??
               MeterValueMeasurand.ENERGY_ACTIVE_IMPORT_REGISTER
-            }: connector id ${connectorId}, transaction id ${connector?.transactionId}, value: ${connectorMinimumEnergyRounded}/${energyValueRounded}/${connectorMaximumEnergyRounded}, duration: ${interval}ms`
+            }: connector id ${connectorId}, transaction id ${
+              connector?.transactionId
+            }, value: ${connectorMinimumEnergyRounded}/${energyValueRounded}/${connectorMaximumEnergyRounded}, duration: ${interval}ms`
           )
         }
       }
@@ -1065,7 +1093,11 @@ const getLimitFromSampledValueTemplateCustomValue = (
   value: string | undefined,
   maxLimit: number,
   minLimit: number,
-  options?: { limitationEnabled?: boolean, fallbackValue?: number, unitMultiplier?: number }
+  options?: {
+    limitationEnabled?: boolean
+    fallbackValue?: number
+    unitMultiplier?: number
+  }
 ): number => {
   options = {
     ...{
@@ -1075,11 +1107,14 @@ const getLimitFromSampledValueTemplateCustomValue = (
     },
     ...options
   }
-  const parsedValue = parseInt(value ?? '')
+  const parsedValue = Number.parseInt(value ?? '')
   if (options.limitationEnabled === true) {
     return max(
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      min((!isNaN(parsedValue) ? parsedValue : Infinity) * options.unitMultiplier!, maxLimit),
+      min(
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        (!isNaN(parsedValue) ? parsedValue : Number.POSITIVE_INFINITY) * options.unitMultiplier!,
+        maxLimit
+      ),
       minLimit
     )
   }
@@ -1228,6 +1263,7 @@ const getMeasurandDefaultLocation = (
 export class OCPPServiceUtils {
   public static readonly getMessageTypeString = getMessageTypeString
   public static readonly sendAndSetConnectorStatus = sendAndSetConnectorStatus
+  public static readonly restoreConnectorStatus = restoreConnectorStatus
   public static readonly isIdTagAuthorized = isIdTagAuthorized
   public static readonly buildTransactionEndMeterValue = buildTransactionEndMeterValue
   protected static getSampledValueTemplate = getSampledValueTemplate

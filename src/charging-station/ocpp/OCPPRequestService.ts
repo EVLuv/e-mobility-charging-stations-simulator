@@ -409,7 +409,11 @@ export abstract class OCPPRequestService {
                     params.skipBufferingOnError === false ? '' : 'non '
                   }buffered message id '${messageId}' with content '${messageToSend}'`,
                   commandName,
-                  { name: error.name, message: error.message, stack: error.stack }
+                  {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                  }
                 )
               )
             }
@@ -503,12 +507,10 @@ export abstract class OCPPRequestService {
     ])
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public abstract requestHandler<ReqType extends JsonType, ResType extends JsonType>(
     chargingStation: ChargingStation,
     commandName: RequestCommand,
-    // FIXME: should be ReqType
-    commandParams?: JsonType,
+    commandParams?: ReqType,
     params?: RequestParams
   ): Promise<ResType>
 }

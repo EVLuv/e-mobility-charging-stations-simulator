@@ -1,10 +1,10 @@
 import { mean } from 'rambda'
 
 export const min = (...args: number[]): number =>
-  args.reduce((minimum, num) => (minimum < num ? minimum : num), Infinity)
+  args.reduce((minimum, num) => (minimum < num ? minimum : num), Number.POSITIVE_INFINITY)
 
 export const max = (...args: number[]): number =>
-  args.reduce((maximum, num) => (maximum > num ? maximum : num), -Infinity)
+  args.reduce((maximum, num) => (maximum > num ? maximum : num), Number.NEGATIVE_INFINITY)
 
 // TODO: use order statistics tree https://en.wikipedia.org/wiki/Order_statistic_tree
 export const nthPercentile = (dataSet: number[], percentile: number): number => {
@@ -21,17 +21,16 @@ export const nthPercentile = (dataSet: number[], percentile: number): number => 
   if (percentile === 100) {
     return sortedDataSet[sortedDataSet.length - 1]
   }
-  const percentileIndexBase = (percentile / 100) * (sortedDataSet.length - 1)
-  const percentileIndexInteger = Math.floor(percentileIndexBase)
+  const base = (percentile / 100) * (sortedDataSet.length - 1)
+  const baseIndex = Math.floor(base)
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-  if (sortedDataSet[percentileIndexInteger + 1] != null) {
+  if (sortedDataSet[baseIndex + 1] != null) {
     return (
-      sortedDataSet[percentileIndexInteger] +
-      (percentileIndexBase - percentileIndexInteger) *
-        (sortedDataSet[percentileIndexInteger + 1] - sortedDataSet[percentileIndexInteger])
+      sortedDataSet[baseIndex] +
+      (base - baseIndex) * (sortedDataSet[baseIndex + 1] - sortedDataSet[baseIndex])
     )
   }
-  return sortedDataSet[percentileIndexInteger]
+  return sortedDataSet[baseIndex]
 }
 
 /**

@@ -167,7 +167,7 @@ export class OCPP16RequestService extends OCPPRequestService {
   public async requestHandler<RequestType extends JsonType, ResponseType extends JsonType>(
     chargingStation: ChargingStation,
     commandName: OCPP16RequestCommand,
-    commandParams?: JsonType,
+    commandParams?: RequestType,
     params?: RequestParams
   ): Promise<ResponseType> {
     // FIXME?: add sanity checks on charging station availability, connector availability, connector status, etc.
@@ -178,6 +178,16 @@ export class OCPP16RequestService extends OCPPRequestService {
     console.log(`command params: ${JSON.stringify(commandParams ?? {}, null, 2)}`)
 
     if (OCPP16ServiceUtils.isRequestCommandSupported(chargingStation, commandName)) {
+      // Post request actions hook
+      switch (commandName) {
+        case OCPP16RequestCommand.START_TRANSACTION:
+          await OCPP16ServiceUtils.sendAndSetConnectorStatus(
+            chargingStation,
+            (commandParams as OCPP16StartTransactionRequest).connectorId,
+            OCPP16ChargePointStatus.Preparing
+          )
+          break
+      }
       return (await this.sendMessage(
         chargingStation,
         generateUUID(),

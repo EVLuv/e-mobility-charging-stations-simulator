@@ -583,9 +583,9 @@ export class OCPP16ResponseService extends OCPPResponseService {
         authorizeConnectorStatus.idTagAuthorized = false
         delete authorizeConnectorStatus.authorizeIdTag
         logger.debug(
-          `${chargingStation.logPrefix()} idTag '${requestPayload.idTag}' rejected with status '${
-            payload.idTagInfo.status
-          }'`
+          `${chargingStation.logPrefix()} idTag '${
+            requestPayload.idTag
+          }' rejected with status '${payload.idTagInfo.status}'`
         )
       }
     } else {
@@ -708,7 +708,9 @@ export class OCPP16ResponseService extends OCPPResponseService {
       connectorStatus?.status !== OCPP16ChargePointStatus.Reserved
     ) {
       logger.error(
-        `${chargingStation.logPrefix()} Trying to start a transaction on connector id ${connectorId} with status ${connectorStatus?.status}`
+        `${chargingStation.logPrefix()} Trying to start a transaction on connector id ${connectorId} with status ${
+          connectorStatus?.status
+        }`
       )
 
       return
@@ -746,9 +748,9 @@ export class OCPP16ResponseService extends OCPPResponseService {
             logger.error(
               `${chargingStation.logPrefix()} Reserved transaction ${
                 payload.transactionId
-              } started with a different idTag ${requestPayload.idTag} than the reservation one ${
-                reservation.idTag
-              }`
+              } started with a different idTag ${
+                requestPayload.idTag
+              } than the reservation one ${reservation.idTag}`
             )
 
             return
@@ -790,11 +792,9 @@ export class OCPP16ResponseService extends OCPPResponseService {
         OCPP16ChargePointStatus.Charging
       )
       logger.info(
-        `${chargingStation.logPrefix()} Transaction with id ${
-          payload.transactionId
-        } STARTED on ${chargingStation.stationInfo?.chargingStationId}#${connectorId} for idTag '${
-          requestPayload.idTag
-        }'`
+        `${chargingStation.logPrefix()} Transaction with id ${payload.transactionId} STARTED on ${
+          chargingStation.stationInfo?.chargingStationId
+        }#${connectorId} for idTag '${requestPayload.idTag}'`
       )
       if (chargingStation.stationInfo?.powerSharedByConnectors === true) {
         // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -833,16 +833,10 @@ export class OCPP16ResponseService extends OCPPResponseService {
     chargingStation: ChargingStation,
     connectorId: number
   ): Promise<void> {
+    chargingStation.stopMeterValues(connectorId)
     const connectorStatus = chargingStation.getConnectorStatus(connectorId)
     resetConnectorStatus(connectorStatus)
-    chargingStation.stopMeterValues(connectorId)
-    if (connectorStatus?.status !== OCPP16ChargePointStatus.Available) {
-      await OCPP16ServiceUtils.sendAndSetConnectorStatus(
-        chargingStation,
-        connectorId,
-        OCPP16ChargePointStatus.Available
-      )
-    }
+    await OCPP16ServiceUtils.restoreConnectorStatus(chargingStation, connectorId, connectorStatus)
   }
 
   private async handleResponseStopTransaction (

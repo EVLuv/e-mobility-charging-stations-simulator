@@ -261,14 +261,17 @@ export class ChargingStation extends EventEmitter {
   }
 
   public get wsConnectionUrl (): URL {
+    const wsConnectionBaseUrlStr = `${
+      this.stationInfo?.supervisionUrlOcppConfiguration === true &&
+      isNotEmptyString(this.stationInfo.supervisionUrlOcppKey) &&
+      isNotEmptyString(getConfigurationKey(this, this.stationInfo.supervisionUrlOcppKey)?.value)
+        ? getConfigurationKey(this, this.stationInfo.supervisionUrlOcppKey)?.value
+        : this.configuredSupervisionUrl.href
+    }`
     return new URL(
-      `${
-        this.stationInfo?.supervisionUrlOcppConfiguration === true &&
-        isNotEmptyString(this.stationInfo.supervisionUrlOcppKey) &&
-        isNotEmptyString(getConfigurationKey(this, this.stationInfo.supervisionUrlOcppKey)?.value)
-          ? getConfigurationKey(this, this.stationInfo.supervisionUrlOcppKey)?.value
-          : this.configuredSupervisionUrl.href
-      }/${this.stationInfo?.chargingStationId}`
+      `${wsConnectionBaseUrlStr}${
+        !wsConnectionBaseUrlStr.endsWith('/') ? '/' : ''
+      }${this.stationInfo?.chargingStationId}`
     )
   }
 
@@ -410,14 +413,17 @@ export class ChargingStation extends EventEmitter {
     const connectorChargingProfilesPowerLimit =
       getChargingStationConnectorChargingProfilesPowerLimit(this, connectorId)
     return min(
-      isNaN(connectorMaximumPower) ? Infinity : connectorMaximumPower,
+      isNaN(connectorMaximumPower) ? Number.POSITIVE_INFINITY : connectorMaximumPower,
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       isNaN(connectorAmperageLimitationPowerLimit!)
-        ? Infinity
+        ? Number.POSITIVE_INFINITY
         : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
         connectorAmperageLimitationPowerLimit!,
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      isNaN(connectorChargingProfilesPowerLimit!) ? Infinity : connectorChargingProfilesPowerLimit!
+      isNaN(connectorChargingProfilesPowerLimit!)
+        ? Number.POSITIVE_INFINITY
+        : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        connectorChargingProfilesPowerLimit!
     )
   }
 
@@ -943,7 +949,7 @@ export class ChargingStation extends EventEmitter {
       )
     }
     return await this.ocppRequestService.requestHandler<
-    StopTransactionRequest,
+    Partial<StopTransactionRequest>,
     StopTransactionResponse
     >(this, RequestCommand.STOP_TRANSACTION, {
       transactionId,
@@ -1358,7 +1364,9 @@ export class ChargingStation extends EventEmitter {
       addConfigurationKey(this, StandardParametersKey.HeartbeatInterval, '0')
     }
     if (getConfigurationKey(this, StandardParametersKey.HeartBeatInterval) == null) {
-      addConfigurationKey(this, StandardParametersKey.HeartBeatInterval, '0', { visible: false })
+      addConfigurationKey(this, StandardParametersKey.HeartBeatInterval, '0', {
+        visible: false
+      })
     }
     if (
       this.stationInfo?.supervisionUrlOcppConfiguration === true &&
@@ -1376,7 +1384,9 @@ export class ChargingStation extends EventEmitter {
       isNotEmptyString(this.stationInfo.supervisionUrlOcppKey) &&
       getConfigurationKey(this, this.stationInfo.supervisionUrlOcppKey) != null
     ) {
-      deleteConfigurationKey(this, this.stationInfo.supervisionUrlOcppKey, { save: false })
+      deleteConfigurationKey(this, this.stationInfo.supervisionUrlOcppKey, {
+        save: false
+      })
     }
     if (
       isNotEmptyString(this.stationInfo?.amperageLimitationOcppKey) &&
@@ -1740,7 +1750,9 @@ export class ChargingStation extends EventEmitter {
               ...(this.connectors.size > 0 && {
                 connectorsStatus: configurationData.connectorsStatus
               }),
-              ...(this.evses.size > 0 && { evsesStatus: configurationData.evsesStatus })
+              ...(this.evses.size > 0 && {
+                evsesStatus: configurationData.evsesStatus
+              })
             } satisfies ChargingStationConfiguration)
           )
           .digest('hex')
@@ -1817,7 +1829,9 @@ export class ChargingStation extends EventEmitter {
     if (this.isWebSocketConnectionOpened()) {
       this.emit(ChargingStationEvents.updated)
       logger.info(
-        `${this.logPrefix()} Connection to OCPP server through ${this.wsConnectionUrl.href} succeeded`
+        `${this.logPrefix()} Connection to OCPP server through ${
+          this.wsConnectionUrl.href
+        } succeeded`
       )
       let registrationRetryCount = 0
       if (!this.isRegistered()) {
@@ -2076,7 +2090,9 @@ export class ChargingStation extends EventEmitter {
           // eslint-disable-next-line @typescript-eslint/no-base-to-string
         }' message '${data.toString()}'${
           this.requests.has(messageId)
-            ? ` matching cached request '${JSON.stringify(this.getCachedRequest(messageType, messageId))}'`
+            ? ` matching cached request '${JSON.stringify(
+                this.getCachedRequest(messageType, messageId)
+              )}'`
             : ''
         } processing error:`,
         error
@@ -2226,21 +2242,28 @@ export class ChargingStation extends EventEmitter {
       for (const [evseId, evseStatus] of this.evses) {
         if (evseId > 0) {
           for (const [connectorId, connectorStatus] of evseStatus.connectors) {
-            const connectorBootStatus = getBootConnectorStatus(this, connectorId, connectorStatus)
-            await sendAndSetConnectorStatus(this, connectorId, connectorBootStatus, evseId)
+            await sendAndSetConnectorStatus(
+              this,
+              connectorId,
+              getBootConnectorStatus(this, connectorId, connectorStatus),
+              evseId
+            )
           }
         }
       }
     } else {
       for (const connectorId of this.connectors.keys()) {
         if (connectorId > 0) {
-          const connectorBootStatus = getBootConnectorStatus(
+          await sendAndSetConnectorStatus(
             this,
             connectorId,
-            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            this.getConnectorStatus(connectorId)!
+            getBootConnectorStatus(
+              this,
+              connectorId,
+              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+              this.getConnectorStatus(connectorId)!
+            )
           )
-          await sendAndSetConnectorStatus(this, connectorId, connectorBootStatus)
         }
       }
     }

@@ -5,6 +5,7 @@ import type { URL } from 'node:url'
 import { parentPort } from 'node:worker_threads'
 
 import { secondsToMilliseconds } from 'date-fns'
+import { CircularBuffer } from 'mnemonist'
 import { is, mean, median } from 'rambda'
 
 import { BaseError } from '../exception/index.js'
@@ -22,7 +23,6 @@ import {
 } from '../types/index.js'
 import {
   buildPerformanceStatisticsMessage,
-  CircularArray,
   Configuration,
   Constants,
   extractTimeSeriesValues,
@@ -179,9 +179,9 @@ export class PerformanceStatistics {
       )
     if (performanceStorageConfiguration.enabled === true) {
       logger.info(
-        `${this.logPrefix()} storage enabled: type ${performanceStorageConfiguration.type}, uri: ${
-          performanceStorageConfiguration.uri
-        }`
+        `${this.logPrefix()} storage enabled: type ${
+          performanceStorageConfiguration.type
+        }, uri: ${performanceStorageConfiguration.uri}`
       )
     }
   }
@@ -267,29 +267,37 @@ export class PerformanceStatistics {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     this.statistics.statisticsData.get(entry.name)!.minTimeMeasurement = min(
       entry.duration,
-      this.statistics.statisticsData.get(entry.name)?.minTimeMeasurement ?? Infinity
+      this.statistics.statisticsData.get(entry.name)?.minTimeMeasurement ?? Number.POSITIVE_INFINITY
     )
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     this.statistics.statisticsData.get(entry.name)!.maxTimeMeasurement = max(
       entry.duration,
-      this.statistics.statisticsData.get(entry.name)?.maxTimeMeasurement ?? -Infinity
+      this.statistics.statisticsData.get(entry.name)?.maxTimeMeasurement ?? Number.NEGATIVE_INFINITY
     )
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     this.statistics.statisticsData.get(entry.name)!.totalTimeMeasurement =
       (this.statistics.statisticsData.get(entry.name)?.totalTimeMeasurement ?? 0) + entry.duration
-    this.statistics.statisticsData.get(entry.name)?.measurementTimeSeries instanceof CircularArray
-      ? this.statistics.statisticsData
-        .get(entry.name)
-        ?.measurementTimeSeries?.push({ timestamp: entry.startTime, value: entry.duration })
-      : // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        (this.statistics.statisticsData.get(entry.name)!.measurementTimeSeries =
-          new CircularArray<TimestampedData>(Constants.DEFAULT_CIRCULAR_BUFFER_CAPACITY, {
-            timestamp: entry.startTime,
-            value: entry.duration
-          }))
+    if (
+      !(
+        this.statistics.statisticsData.get(entry.name)?.measurementTimeSeries instanceof
+        CircularBuffer
+      )
+    ) {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      this.statistics.statisticsData.get(entry.name)!.measurementTimeSeries =
+        new CircularBuffer<TimestampedData>(
+          Array<TimestampedData>,
+          Constants.DEFAULT_CIRCULAR_BUFFER_CAPACITY
+        )
+    }
+    this.statistics.statisticsData.get(entry.name)?.measurementTimeSeries?.push({
+      timestamp: entry.startTime,
+      value: entry.duration
+    })
     const timeMeasurementValues = extractTimeSeriesValues(
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      this.statistics.statisticsData.get(entry.name)!.measurementTimeSeries!
+      this.statistics.statisticsData.get(entry.name)!
+        .measurementTimeSeries as CircularBuffer<TimestampedData>
     )
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     this.statistics.statisticsData.get(entry.name)!.avgTimeMeasurement = mean(timeMeasurementValues)

@@ -12,6 +12,7 @@ import {
   minutesToSeconds,
   secondsToMilliseconds
 } from 'date-fns'
+import type { CircularBuffer } from 'mnemonist'
 import { is } from 'rambda'
 
 import {
@@ -112,7 +113,7 @@ export const convertToInt = (value: unknown): number => {
   }
   let changedValue: number = value as number
   if (typeof value === 'string') {
-    changedValue = parseInt(value)
+    changedValue = Number.parseInt(value)
   }
   if (isNaN(changedValue)) {
     throw new Error(`Cannot convert to integer: '${String(value)}'`)
@@ -126,7 +127,7 @@ export const convertToFloat = (value: unknown): number => {
   }
   let changedValue: number = value as number
   if (typeof value === 'string') {
-    changedValue = parseFloat(value)
+    changedValue = Number.parseFloat(value)
   }
   if (isNaN(changedValue)) {
     throw new Error(`Cannot convert to float: '${String(value)}'`)
@@ -153,7 +154,7 @@ export const getRandomFloat = (max = Number.MAX_VALUE, min = 0): number => {
   if (max < min) {
     throw new RangeError('Invalid interval')
   }
-  if (max - min === Infinity) {
+  if (max - min === Number.POSITIVE_INFINITY) {
     throw new RangeError('Invalid interval')
   }
   return (randomBytes(4).readUInt32LE() / 0xffffffff) * (max - min) + min
@@ -200,8 +201,8 @@ export const getRandomFloatFluctuatedRounded = (
   )
 }
 
-export const extractTimeSeriesValues = (timeSeries: TimestampedData[]): number[] => {
-  return timeSeries.map(timeSeriesItem => timeSeriesItem.value)
+export const extractTimeSeriesValues = (timeSeries: CircularBuffer<TimestampedData>): number[] => {
+  return (timeSeries.toArray() as TimestampedData[]).map(timeSeriesItem => timeSeriesItem.value)
 }
 
 export const clone = <T>(object: T): T => {
@@ -281,7 +282,9 @@ export const JSONStringify = <
       if (is(Map, value)) {
         switch (mapFormat) {
           case MapStringifyFormat.object:
-            return { ...Object.fromEntries<Map<string, Record<string, unknown>>>(value.entries()) }
+            return {
+              ...Object.fromEntries<Map<string, Record<string, unknown>>>(value.entries())
+            }
           case MapStringifyFormat.array:
           default:
             return [...value]
