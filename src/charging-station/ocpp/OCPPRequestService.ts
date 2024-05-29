@@ -382,12 +382,14 @@ export abstract class OCPPRequestService {
           chargingStation.wsConnection?.send(messageToSend, (error?: Error) => {
             PerformanceStatistics.endMeasure(commandName, beginId)
             clearTimeout(sendTimeout)
+
             if (error == null) {
               logger.debug(
                 `${chargingStation.logPrefix()} >> Command '${commandName}' sent ${OCPPServiceUtils.getMessageTypeString(
                   messageType
                 )} payload: ${messageToSend}`
               )
+
               if (messageType === MessageType.CALL_MESSAGE) {
                 this.setCachedRequest(
                   chargingStation,

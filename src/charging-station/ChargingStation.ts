@@ -1563,7 +1563,7 @@ export class ChargingStation extends EventEmitter {
               this.templateFile
             )
 
-            console.log(`----Setting Connector Statis : ${JSON.stringify(connectorStatus)}`)
+            console.log(`----> Setting Connector Status : ${JSON.stringify(connectorStatus)}`)
             this.connectors.set(connectorId, clone<ConnectorStatus>(connectorStatus))
           }
           initializeConnectorsMapStatus(this.connectors, this.logPrefix())
@@ -2225,6 +2225,7 @@ export class ChargingStation extends EventEmitter {
   }
 
   private async startMessageSequence (ATGStopAbsoluteDuration?: boolean): Promise<void> {
+    console.log('------------- Starting Message Sequence ----------------')
     if (this.stationInfo?.autoRegister === true) {
       await this.ocppRequestService.requestHandler<
       BootNotificationRequest,
@@ -2254,6 +2255,8 @@ export class ChargingStation extends EventEmitter {
     } else {
       for (const connectorId of this.connectors.keys()) {
         if (connectorId > 0) {
+          console.log('~~~~ sending connector status requests..... ~~~~')
+
           await sendAndSetConnectorStatus(
             this,
             connectorId,

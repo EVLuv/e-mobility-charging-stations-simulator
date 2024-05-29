@@ -32,6 +32,7 @@ import { OCPPError } from '../../../exception/index.js'
 import {
   type ChangeConfigurationRequest,
   type ChangeConfigurationResponse,
+  ChargingStationEvents,
   ConfigurationSection,
   ErrorType,
   type GenericResponse,
@@ -90,6 +91,7 @@ import {
   type OCPP16UpdateFirmwareResponse,
   type OCPPConfigurationKey,
   OCPPVersion,
+  RegistrationStatusEnumType,
   type RemoteStartTransactionRequest,
   type RemoteStopTransactionRequest,
   ReservationTerminationReason,
@@ -520,6 +522,15 @@ export class OCPP16IncomingRequestService extends OCPPIncomingRequestService {
             )
               .then(response => {
                 chargingStation.bootNotificationResponse = response
+                switch (response.status) {
+                  case RegistrationStatusEnumType.ACCEPTED:
+                    chargingStation.emit(ChargingStationEvents.accepted)
+                    break
+                  case RegistrationStatusEnumType.REJECTED:
+                    chargingStation.emit(ChargingStationEvents.rejected)
+                    break
+                  default:
+                }
               })
               .catch(errorHandler)
             break
