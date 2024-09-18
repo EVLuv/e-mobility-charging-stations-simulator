@@ -748,11 +748,13 @@ export class OCPP16ResponseService extends OCPPResponseService {
         OCPP16ChargePointStatus.Unavailable
       )
     } else {
-      // idleFees
+      // idleFees, Idle Fees
       const minutes = 0
-      console.log(`---------- START ${minutes} WAITING: ${new Date().toISOString()} ----------`)
+      // // @typescript-eslint/ban-ts-comment
+      // console.log(`---------- START ${minutes} WAITING: ${new Date().toISOString()} ----------`)
       await sleep(minutes * 60000)
-      console.log(`---------- END ${minutes} WAITING:  ${new Date().toISOString()} ----------`)
+      // @typescript-eslint/ban-ts-comment
+      // console.log(`---------- END ${minutes} WAITING:  ${new Date().toISOString()} ----------`)
 
       await OCPP16ServiceUtils.sendAndSetConnectorStatus(
         chargingStation,
