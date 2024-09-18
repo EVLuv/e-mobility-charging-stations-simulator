@@ -1,53 +1,53 @@
-import { createRouter, createWebHistory } from 'vue-router'
-
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import AddChargingStations from '@/components/actions/AddChargingStations.vue'
 import SetSupervisionUrl from '@/components/actions/SetSupervisionUrl.vue'
 import StartTransaction from '@/components/actions/StartTransaction.vue'
 import ChargingStationsView from '@/views/ChargingStationsView.vue'
 import NotFoundView from '@/views/NotFoundView.vue'
+import { createRouter, createWebHistory } from 'vue-router'
 
 export const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
-      path: '/',
+      components: {
+        default: ChargingStationsView,
+      },
       name: 'charging-stations',
-      components: {
-        default: ChargingStationsView
-      }
+      path: '/',
     },
     {
-      path: '/add-charging-stations',
+      components: {
+        action: AddChargingStations,
+        default: ChargingStationsView,
+      },
       name: 'add-charging-stations',
-      components: {
-        default: ChargingStationsView,
-        action: AddChargingStations
-      }
+      path: '/add-charging-stations',
     },
     {
-      path: '/set-supervision-url/:hashId/:chargingStationId',
+      components: {
+        action: SetSupervisionUrl,
+        default: ChargingStationsView,
+      },
       name: 'set-supervision-url',
-      components: {
-        default: ChargingStationsView,
-        action: SetSupervisionUrl
-      },
-      props: { default: false, action: true }
+      path: '/set-supervision-url/:hashId/:chargingStationId',
+      props: { action: true, default: false },
     },
     {
-      path: '/start-transaction/:hashId/:chargingStationId/:connectorId',
+      components: {
+        action: StartTransaction,
+        default: ChargingStationsView,
+      },
       name: 'start-transaction',
-      components: {
-        default: ChargingStationsView,
-        action: StartTransaction
-      },
-      props: { default: false, action: true }
+      path: '/start-transaction/:hashId/:chargingStationId/:connectorId',
+      props: { action: true, default: false },
     },
     {
+      components: {
+        default: NotFoundView,
+      },
       name: 'not-found',
       path: '/:pathMatch(.*)*',
-      components: {
-        default: NotFoundView
-      }
-    }
-  ]
+    },
+  ],
 })

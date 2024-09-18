@@ -3,44 +3,56 @@
     <td class="cs-table__column">
       {{ chargingStation.stationInfo.chargingStationId }}
     </td>
-    <td class="cs-table__column">{{ chargingStation.started === true ? 'Yes' : 'No' }}</td>
+    <td class="cs-table__column">
+      {{ chargingStation.started === true ? 'Yes' : 'No' }}
+    </td>
     <td class="cs-table__column">
       {{ getSupervisionUrl() }}
     </td>
-    <td class="cs-table__column">{{ getWSState() }}</td>
+    <td class="cs-table__column">
+      {{ getWSState() }}
+    </td>
     <td class="cs-table__column">
       {{ chargingStation.bootNotificationResponse?.status ?? 'Ø' }}
     </td>
     <td class="cs-table__column">
       {{ chargingStation.stationInfo.templateName }}
     </td>
-    <td class="cs-table__column">{{ chargingStation.stationInfo.chargePointVendor }}</td>
-    <td class="cs-table__column">{{ chargingStation.stationInfo.chargePointModel }}</td>
+    <td class="cs-table__column">
+      {{ chargingStation.stationInfo.chargePointVendor }}
+    </td>
+    <td class="cs-table__column">
+      {{ chargingStation.stationInfo.chargePointModel }}
+    </td>
     <td class="cs-table__column">
       {{ chargingStation.stationInfo.firmwareVersion ?? 'Ø' }}
     </td>
     <td class="cs-table__column">
-      <Button @click="startChargingStation()">Start Charging Station</Button>
-      <Button @click="stopChargingStation()">Stop Charging Station</Button>
+      <Button @click="startChargingStation()">
+        Start Charging Station
+      </Button>
+      <Button @click="stopChargingStation()">
+        Stop Charging Station
+      </Button>
       <ToggleButton
         :id="`${chargingStation.stationInfo.hashId}-set-supervision-url`"
-        :shared="true"
+        :off="
+          () => {
+            $router.push({ name: 'charging-stations' })
+          }
+        "
         :on="
           () => {
             $router.push({
               name: 'set-supervision-url',
               params: {
                 hashId: chargingStation.stationInfo.hashId,
-                chargingStationId: chargingStation.stationInfo.chargingStationId
-              }
+                chargingStationId: chargingStation.stationInfo.chargingStationId,
+              },
             })
           }
         "
-        :off="
-          () => {
-            $router.push({ name: 'charging-stations' })
-          }
-        "
+        :shared="true"
         @clicked="
           () => {
             $emit('need-refresh')
@@ -49,31 +61,62 @@
       >
         Set Supervision Url
       </ToggleButton>
-      <Button @click="openConnection()">Open Connection</Button>
-      <Button @click="closeConnection()">Close Connection</Button>
-      <Button @click="deleteChargingStation()">Delete Charging Station</Button>
+      <Button @click="openConnection()">
+        Open Connection
+      </Button>
+      <Button @click="closeConnection()">
+        Close Connection
+      </Button>
+      <Button @click="deleteChargingStation()">
+        Delete Charging Station
+      </Button>
     </td>
     <td class="cs-table__connectors-column">
       <table id="connectors-table">
-        <caption></caption>
+        <caption />
         <thead id="connectors-table__head">
           <tr class="connectors-table__row">
-            <th scope="col" class="connectors-table__column">Identifier</th>
-            <th scope="col" class="connectors-table__column">Status</th>
-            <th scope="col" class="connectors-table__column">Transaction</th>
-            <th scope="col" class="connectors-table__column">ATG Started</th>
-            <th scope="col" class="connectors-table__column">Actions</th>
+            <th
+              class="connectors-table__column"
+              scope="col"
+            >
+              Identifier
+            </th>
+            <th
+              class="connectors-table__column"
+              scope="col"
+            >
+              Status
+            </th>
+            <th
+              class="connectors-table__column"
+              scope="col"
+            >
+              Transaction
+            </th>
+            <th
+              class="connectors-table__column"
+              scope="col"
+            >
+              ATG Started
+            </th>
+            <th
+              class="connectors-table__column"
+              scope="col"
+            >
+              Actions
+            </th>
           </tr>
         </thead>
         <tbody id="connectors-table__body">
           <CSConnector
             v-for="(connector, index) in getConnectorStatuses()"
             :key="index + 1"
-            :hash-id="chargingStation.stationInfo.hashId"
-            :charging-station-id="chargingStation.stationInfo.chargingStationId"
-            :connector-id="index + 1"
-            :connector="connector"
             :atg-status="getATGStatus(index + 1)"
+            :charging-station-id="chargingStation.stationInfo.chargingStationId"
+            :connector="connector"
+            :connector-id="index + 1"
+            :hash-id="chargingStation.stationInfo.hashId"
             @need-refresh="$emit('need-refresh')"
           />
         </tbody>
@@ -83,13 +126,13 @@
 </template>
 
 <script setup lang="ts">
-import { useToast } from 'vue-toast-notification'
+import type { ChargingStationData, ConnectorStatus, Status } from '@/types'
 
 import Button from '@/components/buttons/Button.vue'
 import ToggleButton from '@/components/buttons/ToggleButton.vue'
 import CSConnector from '@/components/charging-stations/CSConnector.vue'
 import { useUIClient } from '@/composables'
-import type { ChargingStationData, ConnectorStatus, Status } from '@/types'
+import { useToast } from 'vue-toast-notification'
 
 const props = defineProps<{
   chargingStation: ChargingStationData
@@ -142,7 +185,7 @@ const startChargingStation = (): void => {
   uiClient
     .startChargingStation(props.chargingStation.stationInfo.hashId)
     .then(() => {
-      $toast.success('Charging station successfully started')
+      return $toast.success('Charging station successfully started')
     })
     .catch((error: Error) => {
       $toast.error('Error at starting charging station')
@@ -153,7 +196,7 @@ const stopChargingStation = (): void => {
   uiClient
     .stopChargingStation(props.chargingStation.stationInfo.hashId)
     .then(() => {
-      $toast.success('Charging station successfully stopped')
+      return $toast.success('Charging station successfully stopped')
     })
     .catch((error: Error) => {
       $toast.error('Error at stopping charging station')
@@ -164,7 +207,7 @@ const openConnection = (): void => {
   uiClient
     .openConnection(props.chargingStation.stationInfo.hashId)
     .then(() => {
-      $toast.success('Connection successfully opened')
+      return $toast.success('Connection successfully opened')
     })
     .catch((error: Error) => {
       $toast.error('Error at opening connection')
@@ -175,7 +218,7 @@ const closeConnection = (): void => {
   uiClient
     .closeConnection(props.chargingStation.stationInfo.hashId)
     .then(() => {
-      $toast.success('Connection successfully closed')
+      return $toast.success('Connection successfully closed')
     })
     .catch((error: Error) => {
       $toast.error('Error at closing connection')
@@ -186,7 +229,7 @@ const deleteChargingStation = (): void => {
   uiClient
     .deleteChargingStation(props.chargingStation.stationInfo.hashId)
     .then(() => {
-      $toast.success('Charging station successfully deleted')
+      return $toast.success('Charging station successfully deleted')
     })
     .catch((error: Error) => {
       $toast.error('Error at deleting charging station')

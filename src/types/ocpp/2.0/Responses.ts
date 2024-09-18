@@ -4,14 +4,14 @@ import type { RegistrationStatusEnumType } from '../Common.js'
 import type {
   GenericStatusEnumType,
   InstallCertificateStatusEnumType,
-  StatusInfoType
+  StatusInfoType,
 } from './Common.js'
 import type { OCPP20SetVariableResultType } from './Variables.js'
 
 export interface OCPP20BootNotificationResponse extends JsonObject {
   currentTime: Date
-  status: RegistrationStatusEnumType
   interval: number
+  status: RegistrationStatusEnumType
   statusInfo?: StatusInfoType
 }
 

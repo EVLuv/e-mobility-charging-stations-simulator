@@ -11,7 +11,7 @@
 [![GitHub commit activity (main)](https://img.shields.io/github/commit-activity/m/SAP/e-mobility-charging-stations-simulator/main?color=brightgreen&logo=github)](https://github.com/SAP/e-mobility-charging-stations-simulator/graphs/commit-activity)
 [![CI workflow](https://github.com/SAP/e-mobility-charging-stations-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/SAP/e-mobility-charging-stations-simulator/actions/workflows/ci.yml)
 [![REUSE status](https://api.reuse.software/badge/github.com/SAP/e-mobility-charging-stations-simulator)](https://api.reuse.software/info/github.com/SAP/e-mobility-charging-stations-simulator)
-[![Javascript Standard Style Guide](<https://badgen.net/static/code style/standard/green>)](https://standardjs.com)
+[![neostandard Javascript Code Style](<https://badgen.net/static/code style/neostandard/green>)](https://github.com/neostandard/neostandard)
 
 </div>
 
@@ -24,13 +24,17 @@ Simple [node.js](https://nodejs.org/) software to simulate and scale a set of ch
     - [Windows](#windows)
     - [MacOSX](#macosx)
     - [GNU/Linux](#gnulinux)
+  - [Development prerequisites (optional)](#development-prerequisites-optional)
+    - [Unix](#unix)
+    - [Windows](#windows-1)
+  - [Branching model](#branching-model)
   - [Dependencies](#dependencies)
 - [Initial configuration](#initial-configuration)
 - [Start simulator](#start-simulator)
 - [Start Web UI](#start-web-ui)
 - [Configuration files syntax](#configuration-files-syntax)
   - [Charging stations simulator configuration](#charging-stations-simulator-configuration)
-  - [Charging station configuration template](#charging-station-configuration-template)
+  - [Charging station template configuration](#charging-station-template-configuration)
   - [Charging station configuration](#charging-station-configuration)
 - [Docker](#docker)
 - [OCPP-J commands supported](#ocpp-j-commands-supported)
@@ -70,11 +74,35 @@ brew install node
 
 #### GNU/Linux
 
-- [NodeSource](https://github.com/nodesource/distributions) Node.js Binary Distributions for all supported versions.
+- [NodeSource](https://github.com/nodesource/distributions) node.js binary distributions for all supported versions.
 
-#### Dependencies
+### Development prerequisites (optional)
 
-Enable corepack if not already done and install latest pnpm version:
+Install [volta](https://volta.sh/) for managing automatically the node.js runtime and package manager version:
+
+#### Unix
+
+```shell
+curl https://get.volta.sh | bash
+```
+
+#### Windows
+
+```powershell
+choco install -y volta
+```
+
+Setup [volta](https://volta.sh/) with [pnpm](https://github.com/pnpm/pnpm) package manager support: https://docs.volta.sh/advanced/pnpm
+
+### Branching model
+
+The `main` branch is the default development branch.  
+The `vX` branches are the maintenance branches for the corresponding major version `X`.  
+The `vX.Y` branches are the maintenance branches for the corresponding major and minor version `X.Y`.
+
+### Dependencies
+
+Enable corepack, if [volta](https://volta.sh/) is not installed and configured, and install latest pnpm version:
 
 ```shell
 corepack enable
@@ -160,7 +188,7 @@ But the modifications to test have to be done to the files in the build target d
 - **dynamicPool** (experimental):
   Dynamically sized worker pool executing a fixed total number of simulated charging stations
 
-### Charging station configuration template
+### Charging station template configuration
 
 **src/assets/station-templates/\<name\>.json**:
 

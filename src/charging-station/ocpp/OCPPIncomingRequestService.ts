@@ -1,20 +1,19 @@
-import { EventEmitter } from 'node:events'
-
 import _Ajv, { type ValidateFunction } from 'ajv'
 import _ajvFormats from 'ajv-formats'
+import { EventEmitter } from 'node:events'
+
+import type {
+  ClearCacheResponse,
+  IncomingRequestCommand,
+  JsonType,
+  OCPPVersion,
+} from '../../types/index.js'
 
 import { type ChargingStation, getIdTagsFile } from '../../charging-station/index.js'
 import { OCPPError } from '../../exception/index.js'
-import type {
-  ClearCacheResponse,
-  HandleErrorParams,
-  IncomingRequestCommand,
-  JsonType,
-  OCPPVersion
-} from '../../types/index.js'
-import { logger, setDefaultErrorParams } from '../../utils/index.js'
+import { logger } from '../../utils/index.js'
 import { OCPPConstants } from './OCPPConstants.js'
-import { OCPPServiceUtils } from './OCPPServiceUtils.js'
+import { ajvErrorsToErrorType } from './OCPPServiceUtils.js'
 type Ajv = _Ajv.default
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 const Ajv = _Ajv.default
@@ -23,20 +22,21 @@ const ajvFormats = _ajvFormats.default
 const moduleName = 'OCPPIncomingRequestService'
 
 export abstract class OCPPIncomingRequestService extends EventEmitter {
-  private static instance: OCPPIncomingRequestService | null = null
-  private readonly version: OCPPVersion
+  private static instance: null | OCPPIncomingRequestService = null
   protected readonly ajv: Ajv
   protected abstract payloadValidateFunctions: Map<
-  IncomingRequestCommand,
-  ValidateFunction<JsonType>
+    IncomingRequestCommand,
+    ValidateFunction<JsonType>
   >
+
+  private readonly version: OCPPVersion
 
   protected constructor (version: OCPPVersion) {
     super()
     this.version = version
     this.ajv = new Ajv({
       keywords: ['javaType'],
-      multipleOfPrecision: 2
+      multipleOfPrecision: 2,
     })
     ajvFormats(this.ajv)
     this.incomingRequestHandler = this.incomingRequestHandler.bind(this)
@@ -50,28 +50,15 @@ export abstract class OCPPIncomingRequestService extends EventEmitter {
     return OCPPIncomingRequestService.instance as T
   }
 
-  protected handleIncomingRequestError<T extends JsonType>(
-    chargingStation: ChargingStation,
-    commandName: IncomingRequestCommand,
-    error: Error,
-    params: HandleErrorParams<T> = { throwError: true, consoleOut: false }
-  ): T | undefined {
-    setDefaultErrorParams(params)
-    logger.error(
-      `${chargingStation.logPrefix()} ${moduleName}.handleIncomingRequestError: Incoming request command '${commandName}' error:`,
-      error
-    )
-    if (params.throwError === false && params.errorResponse != null) {
-      return params.errorResponse
+  protected handleRequestClearCache (chargingStation: ChargingStation): ClearCacheResponse {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    if (chargingStation.idTagsCache.deleteIdTags(getIdTagsFile(chargingStation.stationInfo!)!)) {
+      return OCPPConstants.OCPP_RESPONSE_ACCEPTED
     }
-    if (params.throwError === true && params.errorResponse == null) {
-      throw error
-    }
-    if (params.throwError === true && params.errorResponse != null) {
-      return params.errorResponse
-    }
+    return OCPPConstants.OCPP_RESPONSE_REJECTED
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
   protected validateIncomingRequestPayload<T extends JsonType>(
     chargingStation: ChargingStation,
     commandName: IncomingRequestCommand,
@@ -89,22 +76,14 @@ export abstract class OCPPIncomingRequestService extends EventEmitter {
       validate?.errors
     )
     throw new OCPPError(
-      OCPPServiceUtils.ajvErrorsToErrorType(validate?.errors),
+      ajvErrorsToErrorType(validate?.errors),
       'Incoming request PDU is invalid',
       commandName,
       JSON.stringify(validate?.errors, undefined, 2)
     )
   }
 
-  protected handleRequestClearCache (chargingStation: ChargingStation): ClearCacheResponse {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    if (chargingStation.idTagsCache.deleteIdTags(getIdTagsFile(chargingStation.stationInfo!)!)) {
-      return OCPPConstants.OCPP_RESPONSE_ACCEPTED
-    }
-    return OCPPConstants.OCPP_RESPONSE_REJECTED
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-unnecessary-type-parameters
   public abstract incomingRequestHandler<ReqType extends JsonType, ResType extends JsonType>(
     chargingStation: ChargingStation,
     messageId: string,

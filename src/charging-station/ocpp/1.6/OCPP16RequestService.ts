@@ -3,6 +3,8 @@
 import type { ValidateFunction } from 'ajv'
 
 import type { ChargingStation } from '../../../charging-station/index.js'
+import type { OCPPResponseService } from '../OCPPResponseService.js'
+
 import { OCPPError } from '../../../exception/index.js'
 import {
   ErrorType,
@@ -21,11 +23,10 @@ import {
   type OCPP16StatusNotificationRequest,
   type OCPP16StopTransactionRequest,
   OCPPVersion,
-  type RequestParams
+  type RequestParams,
 } from '../../../types/index.js'
 import { Constants, generateUUID } from '../../../utils/index.js'
 import { OCPPRequestService } from '../OCPPRequestService.js'
-import type { OCPPResponseService } from '../OCPPResponseService.js'
 import { OCPP16Constants } from './OCPP16Constants.js'
 import { OCPP16ServiceUtils } from './OCPP16ServiceUtils.js'
 
@@ -42,169 +43,109 @@ export class OCPP16RequestService extends OCPPRequestService {
     this.payloadValidateFunctions = new Map<OCPP16RequestCommand, ValidateFunction<JsonType>>([
       [
         OCPP16RequestCommand.AUTHORIZE,
-        this.ajv
-          .compile(
-            OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16AuthorizeRequest>(
-              'assets/json-schemas/ocpp/1.6/Authorize.json',
-              moduleName,
-              'constructor'
-            )
+        this.ajv.compile(
+          OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16AuthorizeRequest>(
+            'assets/json-schemas/ocpp/1.6/Authorize.json',
+            moduleName,
+            'constructor'
           )
-          .bind(this)
+        ),
       ],
       [
         OCPP16RequestCommand.BOOT_NOTIFICATION,
-        this.ajv
-          .compile(
-            OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16BootNotificationRequest>(
-              'assets/json-schemas/ocpp/1.6/BootNotification.json',
-              moduleName,
-              'constructor'
-            )
+        this.ajv.compile(
+          OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16BootNotificationRequest>(
+            'assets/json-schemas/ocpp/1.6/BootNotification.json',
+            moduleName,
+            'constructor'
           )
-          .bind(this)
-      ],
-      [
-        OCPP16RequestCommand.DIAGNOSTICS_STATUS_NOTIFICATION,
-        this.ajv
-          .compile(
-            OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16DiagnosticsStatusNotificationRequest>(
-              'assets/json-schemas/ocpp/1.6/DiagnosticsStatusNotification.json',
-              moduleName,
-              'constructor'
-            )
-          )
-          .bind(this)
-      ],
-      [
-        OCPP16RequestCommand.HEARTBEAT,
-        this.ajv
-          .compile(
-            OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16HeartbeatRequest>(
-              'assets/json-schemas/ocpp/1.6/Heartbeat.json',
-              moduleName,
-              'constructor'
-            )
-          )
-          .bind(this)
-      ],
-      [
-        OCPP16RequestCommand.METER_VALUES,
-        this.ajv
-          .compile(
-            OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16MeterValuesRequest>(
-              'assets/json-schemas/ocpp/1.6/MeterValues.json',
-              moduleName,
-              'constructor'
-            )
-          )
-          .bind(this)
-      ],
-      [
-        OCPP16RequestCommand.STATUS_NOTIFICATION,
-        this.ajv
-          .compile(
-            OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16StatusNotificationRequest>(
-              'assets/json-schemas/ocpp/1.6/StatusNotification.json',
-              moduleName,
-              'constructor'
-            )
-          )
-          .bind(this)
-      ],
-      [
-        OCPP16RequestCommand.START_TRANSACTION,
-        this.ajv
-          .compile(
-            OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16StartTransactionRequest>(
-              'assets/json-schemas/ocpp/1.6/StartTransaction.json',
-              moduleName,
-              'constructor'
-            )
-          )
-          .bind(this)
-      ],
-      [
-        OCPP16RequestCommand.STOP_TRANSACTION,
-        this.ajv
-          .compile(
-            OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16StopTransactionRequest>(
-              'assets/json-schemas/ocpp/1.6/StopTransaction.json',
-              moduleName,
-              'constructor'
-            )
-          )
-          .bind(this)
+        ),
       ],
       [
         OCPP16RequestCommand.DATA_TRANSFER,
-        this.ajv
-          .compile(
-            OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16DataTransferRequest>(
-              'assets/json-schemas/ocpp/1.6/DataTransfer.json',
-              moduleName,
-              'constructor'
-            )
+        this.ajv.compile(
+          OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16DataTransferRequest>(
+            'assets/json-schemas/ocpp/1.6/DataTransfer.json',
+            moduleName,
+            'constructor'
           )
-          .bind(this)
+        ),
+      ],
+      [
+        OCPP16RequestCommand.DIAGNOSTICS_STATUS_NOTIFICATION,
+        this.ajv.compile(
+          OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16DiagnosticsStatusNotificationRequest>(
+            'assets/json-schemas/ocpp/1.6/DiagnosticsStatusNotification.json',
+            moduleName,
+            'constructor'
+          )
+        ),
       ],
       [
         OCPP16RequestCommand.FIRMWARE_STATUS_NOTIFICATION,
-        this.ajv
-          .compile(
-            OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16FirmwareStatusNotificationRequest>(
-              'assets/json-schemas/ocpp/1.6/FirmwareStatusNotification.json',
-              moduleName,
-              'constructor'
-            )
+        this.ajv.compile(
+          OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16FirmwareStatusNotificationRequest>(
+            'assets/json-schemas/ocpp/1.6/FirmwareStatusNotification.json',
+            moduleName,
+            'constructor'
           )
-          .bind(this)
-      ]
+        ),
+      ],
+      [
+        OCPP16RequestCommand.HEARTBEAT,
+        this.ajv.compile(
+          OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16HeartbeatRequest>(
+            'assets/json-schemas/ocpp/1.6/Heartbeat.json',
+            moduleName,
+            'constructor'
+          )
+        ),
+      ],
+      [
+        OCPP16RequestCommand.METER_VALUES,
+        this.ajv.compile(
+          OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16MeterValuesRequest>(
+            'assets/json-schemas/ocpp/1.6/MeterValues.json',
+            moduleName,
+            'constructor'
+          )
+        ),
+      ],
+      [
+        OCPP16RequestCommand.START_TRANSACTION,
+        this.ajv.compile(
+          OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16StartTransactionRequest>(
+            'assets/json-schemas/ocpp/1.6/StartTransaction.json',
+            moduleName,
+            'constructor'
+          )
+        ),
+      ],
+      [
+        OCPP16RequestCommand.STATUS_NOTIFICATION,
+        this.ajv.compile(
+          OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16StatusNotificationRequest>(
+            'assets/json-schemas/ocpp/1.6/StatusNotification.json',
+            moduleName,
+            'constructor'
+          )
+        ),
+      ],
+      [
+        OCPP16RequestCommand.STOP_TRANSACTION,
+        this.ajv.compile(
+          OCPP16ServiceUtils.parseJsonSchemaFile<OCPP16StopTransactionRequest>(
+            'assets/json-schemas/ocpp/1.6/StopTransaction.json',
+            moduleName,
+            'constructor'
+          )
+        ),
+      ],
     ])
     this.buildRequestPayload = this.buildRequestPayload.bind(this)
   }
 
-  public async requestHandler<RequestType extends JsonType, ResponseType extends JsonType>(
-    chargingStation: ChargingStation,
-    commandName: OCPP16RequestCommand,
-    commandParams?: RequestType,
-    params?: RequestParams
-  ): Promise<ResponseType> {
-    // FIXME?: add sanity checks on charging station availability, connector availability, connector status, etc.
-
-    console.log('----REQUEST HANDLER----')
-    console.log('-----------------------')
-
-    console.log(`command params: ${JSON.stringify(commandParams ?? {}, null, 2)}`)
-
-    if (OCPP16ServiceUtils.isRequestCommandSupported(chargingStation, commandName)) {
-      // Post request actions hook
-      switch (commandName) {
-        case OCPP16RequestCommand.START_TRANSACTION:
-          await OCPP16ServiceUtils.sendAndSetConnectorStatus(
-            chargingStation,
-            (commandParams as OCPP16StartTransactionRequest).connectorId,
-            OCPP16ChargePointStatus.Preparing
-          )
-          break
-      }
-      return (await this.sendMessage(
-        chargingStation,
-        generateUUID(),
-        this.buildRequestPayload<RequestType>(chargingStation, commandName, commandParams),
-        commandName,
-        params
-      )) as ResponseType
-    }
-    // OCPPError usage here is debatable: it's an error in the OCPP stack but not targeted to sendError().
-    throw new OCPPError(
-      ErrorType.NOT_SUPPORTED,
-      `Unsupported OCPP command '${commandName}'`,
-      commandName,
-      commandParams
-    )
-  }
-
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
   private buildRequestPayload<Request extends JsonType>(
     chargingStation: ChargingStation,
     commandName: OCPP16RequestCommand,
@@ -214,18 +155,18 @@ export class OCPP16RequestService extends OCPPRequestService {
     let energyActiveImportRegister: number
     commandParams = commandParams as JsonObject
     switch (commandName) {
+      case OCPP16RequestCommand.AUTHORIZE:
+        return {
+          idTag: Constants.DEFAULT_IDTAG,
+          ...commandParams,
+        } as unknown as Request
       case OCPP16RequestCommand.BOOT_NOTIFICATION:
+      case OCPP16RequestCommand.DATA_TRANSFER:
       case OCPP16RequestCommand.DIAGNOSTICS_STATUS_NOTIFICATION:
       case OCPP16RequestCommand.FIRMWARE_STATUS_NOTIFICATION:
       case OCPP16RequestCommand.METER_VALUES:
       case OCPP16RequestCommand.STATUS_NOTIFICATION:
-      case OCPP16RequestCommand.DATA_TRANSFER:
         return commandParams as unknown as Request
-      case OCPP16RequestCommand.AUTHORIZE:
-        return {
-          idTag: Constants.DEFAULT_IDTAG,
-          ...commandParams
-        } as unknown as Request
       case OCPP16RequestCommand.HEARTBEAT:
         return OCPP16Constants.OCPP_REQUEST_EMPTY as unknown as Request
       case OCPP16RequestCommand.START_TRANSACTION:
@@ -247,9 +188,9 @@ export class OCPP16RequestService extends OCPPRequestService {
               chargingStation.getConnectorStatus(0)?.status === OCPP16ChargePointStatus.Reserved
                 ? 0
                 : (commandParams.connectorId as number)
-            )!.reservationId
+            )!.reservationId,
           }),
-          ...commandParams
+          ...commandParams,
         } as unknown as Request
       case OCPP16RequestCommand.STOP_TRANSACTION:
         chargingStation.stationInfo?.transactionDataMeterValues === true &&
@@ -274,19 +215,55 @@ export class OCPP16RequestService extends OCPPRequestService {
                 connectorId!,
                 energyActiveImportRegister
               )
-            )
+            ),
           }),
-          ...commandParams
+          ...commandParams,
         } as unknown as Request
       default:
         // OCPPError usage here is debatable: it's an error in the OCPP stack but not targeted to sendError().
         throw new OCPPError(
           ErrorType.NOT_SUPPORTED,
           // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-          `Unsupported OCPP command '${commandName}'`,
+          `Unsupported OCPP command ${commandName}`,
           commandName,
           commandParams
         )
     }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
+  public async requestHandler<RequestType extends JsonType, ResponseType extends JsonType>(
+    chargingStation: ChargingStation,
+    commandName: OCPP16RequestCommand,
+    commandParams?: RequestType,
+    params?: RequestParams
+  ): Promise<ResponseType> {
+    // FIXME?: add sanity checks on charging station availability, connector availability, connector status, etc.
+    if (OCPP16ServiceUtils.isRequestCommandSupported(chargingStation, commandName)) {
+      // Pre request actions hook
+      switch (commandName) {
+        case OCPP16RequestCommand.START_TRANSACTION:
+          await OCPP16ServiceUtils.sendAndSetConnectorStatus(
+            chargingStation,
+            (commandParams as OCPP16StartTransactionRequest).connectorId,
+            OCPP16ChargePointStatus.Preparing
+          )
+          break
+      }
+      return (await this.sendMessage(
+        chargingStation,
+        generateUUID(),
+        this.buildRequestPayload<RequestType>(chargingStation, commandName, commandParams),
+        commandName,
+        params
+      )) as ResponseType
+    }
+    // OCPPError usage here is debatable: it's an error in the OCPP stack but not targeted to sendError().
+    throw new OCPPError(
+      ErrorType.NOT_SUPPORTED,
+      `Unsupported OCPP command ${commandName}`,
+      commandName,
+      commandParams
+    )
   }
 }

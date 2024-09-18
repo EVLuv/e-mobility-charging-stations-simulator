@@ -22,7 +22,7 @@ export const getUsernameAndPasswordFromAuthorizationToken = (
 export const handleProtocols = (
   protocols: Set<string>,
   _request: IncomingMessage
-): string | false => {
+): false | string => {
   let protocol: Protocol | undefined
   let version: ProtocolVersion | undefined
   if (protocols.size === 0) {
@@ -36,6 +36,7 @@ export const handleProtocols = (
   logger.error(
     `${logPrefix(
       ' UI WebSocket Server |'
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
     )} Unsupported protocol: '${protocol}' or protocol version: '${version}'`
   )
   return false

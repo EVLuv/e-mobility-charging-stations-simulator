@@ -1,13 +1,13 @@
-import { shallowMount } from '@vue/test-utils'
-import { expect, test } from 'vitest'
+import type { ChargingStationData } from '@/types'
 
 import CSTable from '@/components/charging-stations/CSTable.vue'
-import type { ChargingStationData } from '@/types'
+import { shallowMount } from '@vue/test-utils'
+import { expect, test } from 'vitest'
 
 test('renders CS table columns name', () => {
   const chargingStations: ChargingStationData[] = []
   const wrapper = shallowMount(CSTable, {
-    props: { chargingStations, idTag: '0' }
+    props: { chargingStations, idTag: '0' },
   })
   expect(wrapper.text()).to.include('Name')
   expect(wrapper.text()).to.include('Started')

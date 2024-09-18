@@ -1,7 +1,9 @@
+import type { WebSocket } from 'ws'
+
 import { type IncomingMessage, Server, type ServerResponse } from 'node:http'
 import { createServer, type Http2Server } from 'node:http2'
 
-import type { WebSocket } from 'ws'
+import type { AbstractUIService } from './ui-services/AbstractUIService.js'
 
 import { BaseError } from '../../exception/index.js'
 import {
@@ -15,25 +17,24 @@ import {
   ProtocolVersion,
   type RequestPayload,
   type ResponsePayload,
-  type UIServerConfiguration
+  type UIServerConfiguration,
 } from '../../types/index.js'
 import { logger } from '../../utils/index.js'
-import type { AbstractUIService } from './ui-services/AbstractUIService.js'
 import { UIServiceFactory } from './ui-services/UIServiceFactory.js'
 import { getUsernameAndPasswordFromAuthorizationToken } from './UIServerUtils.js'
 
 const moduleName = 'AbstractUIServer'
 
 export abstract class AbstractUIServer {
-  public readonly chargingStations: Map<string, ChargingStationData>
-  public readonly chargingStationTemplates: Set<string>
-  protected readonly httpServer: Server | Http2Server
+  protected readonly httpServer: Http2Server | Server
   protected readonly responseHandlers: Map<
     `${string}-${string}-${string}-${string}-${string}`,
-  ServerResponse | WebSocket
+    ServerResponse | WebSocket
   >
 
   protected readonly uiServices: Map<ProtocolVersion, AbstractUIService>
+  public readonly chargingStations: Map<string, ChargingStationData>
+  public readonly chargingStationTemplates: Set<string>
 
   public constructor (protected readonly uiServerConfiguration: UIServerConfiguration) {
     this.chargingStations = new Map<string, ChargingStationData>()
@@ -47,72 +48,15 @@ export abstract class AbstractUIServer {
         break
       default:
         throw new BaseError(
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           `Unsupported application protocol version ${this.uiServerConfiguration.version} in '${ConfigurationSection.uiServer}' configuration section`
         )
     }
     this.responseHandlers = new Map<
       `${string}-${string}-${string}-${string}-${string}`,
-    ServerResponse | WebSocket
+      ServerResponse | WebSocket
     >()
     this.uiServices = new Map<ProtocolVersion, AbstractUIService>()
-  }
-
-  public buildProtocolRequest (
-    uuid: `${string}-${string}-${string}-${string}-${string}`,
-    procedureName: ProcedureName,
-    requestPayload: RequestPayload
-  ): ProtocolRequest {
-    return [uuid, procedureName, requestPayload]
-  }
-
-  public buildProtocolResponse (
-    uuid: `${string}-${string}-${string}-${string}-${string}`,
-    responsePayload: ResponsePayload
-  ): ProtocolResponse {
-    return [uuid, responsePayload]
-  }
-
-  public stop (): void {
-    this.stopHttpServer()
-    for (const uiService of this.uiServices.values()) {
-      uiService.stop()
-    }
-    this.clearCaches()
-  }
-
-  public clearCaches (): void {
-    this.chargingStations.clear()
-    this.chargingStationTemplates.clear()
-  }
-
-  public async sendInternalRequest (request: ProtocolRequest): Promise<ProtocolResponse> {
-    const protocolVersion = ProtocolVersion['0.0.1']
-    this.registerProtocolVersionUIService(protocolVersion)
-    return await (this.uiServices
-      .get(protocolVersion)
-      ?.requestHandler(request) as Promise<ProtocolResponse>)
-  }
-
-  public hasResponseHandler (uuid: `${string}-${string}-${string}-${string}-${string}`): boolean {
-    return this.responseHandlers.has(uuid)
-  }
-
-  protected startHttpServer (): void {
-    this.httpServer.on('error', error => {
-      logger.error(
-        `${this.logPrefix(moduleName, 'start.httpServer.on.error')} HTTP server error:`,
-        error
-      )
-    })
-    if (!this.httpServer.listening) {
-      this.httpServer.listen(this.uiServerConfiguration.options)
-    }
-  }
-
-  protected registerProtocolVersionUIService (version: ProtocolVersion): void {
-    if (!this.uiServices.has(version)) {
-      this.uiServices.set(version, UIServiceFactory.getUIServiceImplementation(version, this))
-    }
   }
 
   protected authenticate (req: IncomingMessage, next: (err?: Error) => void): void {
@@ -133,10 +77,21 @@ export abstract class AbstractUIServer {
     next()
   }
 
-  private stopHttpServer (): void {
-    if (this.httpServer.listening) {
-      this.httpServer.close()
-      this.httpServer.removeAllListeners()
+  protected registerProtocolVersionUIService (version: ProtocolVersion): void {
+    if (!this.uiServices.has(version)) {
+      this.uiServices.set(version, UIServiceFactory.getUIServiceImplementation(version, this))
+    }
+  }
+
+  protected startHttpServer (): void {
+    this.httpServer.on('error', error => {
+      logger.error(
+        `${this.logPrefix(moduleName, 'start.httpServer.on.error')} HTTP server error:`,
+        error
+      )
+    })
+    if (!this.httpServer.listening) {
+      this.httpServer.listen(this.uiServerConfiguration.options)
     }
   }
 
@@ -165,7 +120,7 @@ export abstract class AbstractUIServer {
   private isValidProtocolBasicAuth (req: IncomingMessage, next: (err?: Error) => void): boolean {
     const authorizationProtocol = req.headers['sec-websocket-protocol']?.split(/,\s+/).pop()
     const [username, password] = getUsernameAndPasswordFromAuthorizationToken(
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/restrict-template-expressions
       `${authorizationProtocol}${Array(((4 - (authorizationProtocol!.length % 4)) % 4) + 1).join(
         '='
       )}`
@@ -183,8 +138,55 @@ export abstract class AbstractUIServer {
     )
   }
 
-  public abstract start (): void
+  private stopHttpServer (): void {
+    if (this.httpServer.listening) {
+      this.httpServer.close()
+      this.httpServer.removeAllListeners()
+    }
+  }
+
+  public buildProtocolRequest (
+    uuid: `${string}-${string}-${string}-${string}-${string}`,
+    procedureName: ProcedureName,
+    requestPayload: RequestPayload
+  ): ProtocolRequest {
+    return [uuid, procedureName, requestPayload]
+  }
+
+  public buildProtocolResponse (
+    uuid: `${string}-${string}-${string}-${string}-${string}`,
+    responsePayload: ResponsePayload
+  ): ProtocolResponse {
+    return [uuid, responsePayload]
+  }
+
+  public clearCaches (): void {
+    this.chargingStations.clear()
+    this.chargingStationTemplates.clear()
+  }
+
+  public hasResponseHandler (uuid: `${string}-${string}-${string}-${string}-${string}`): boolean {
+    return this.responseHandlers.has(uuid)
+  }
+
+  public abstract logPrefix (moduleName?: string, methodName?: string, prefixSuffix?: string): string
+
+  public async sendInternalRequest (request: ProtocolRequest): Promise<ProtocolResponse> {
+    const protocolVersion = ProtocolVersion['0.0.1']
+    this.registerProtocolVersionUIService(protocolVersion)
+    return await (this.uiServices
+      .get(protocolVersion)
+      ?.requestHandler(request) as Promise<ProtocolResponse>)
+  }
+
   public abstract sendRequest (request: ProtocolRequest): void
   public abstract sendResponse (response: ProtocolResponse): void
-  public abstract logPrefix (moduleName?: string, methodName?: string, prefixSuffix?: string): string
+  public abstract start (): void
+  public stop (): void {
+    this.stopHttpServer()
+    for (const uiService of this.uiServices.values()) {
+      uiService.stop()
+    }
+    this.clearCaches()
+  }
 }

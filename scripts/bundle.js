@@ -1,20 +1,18 @@
 /* eslint-disable n/no-unpublished-import */
-import { env } from 'node:process'
-
 import chalk from 'chalk'
 import { build } from 'esbuild'
 import { clean } from 'esbuild-plugin-clean'
 import { copy } from 'esbuild-plugin-copy'
+import { env } from 'node:process'
 
 const isDevelopmentBuild = env.BUILD === 'development'
 const sourcemap = !!isDevelopmentBuild
 console.info(chalk.green(`Building in ${isDevelopmentBuild ? 'development' : 'production'} mode`))
 console.time('Build time')
 await build({
-  entryPoints: ['./src/start.ts', './src/charging-station/ChargingStationWorker.ts'],
   bundle: true,
-  platform: 'node',
-  format: 'esm',
+  entryNames: '[name]',
+  entryPoints: ['./src/start.ts', './src/charging-station/ChargingStationWorker.ts'],
   external: [
     '@mikro-orm/*',
     'ajv',
@@ -34,13 +32,12 @@ await build({
     'winston',
     'winston/*',
     'winston-daily-rotate-file',
-    'ws'
+    'ws',
   ],
-  treeShaking: true,
+  format: 'esm',
   minify: true,
-  sourcemap,
-  entryNames: '[name]',
   outdir: './dist',
+  platform: 'node',
   plugins: [
     clean({
       patterns: [
@@ -50,33 +47,35 @@ await build({
         './dist/assets/json-schemas',
         './dist/assets/station-templates',
         './dist/assets/ui-protocol',
-        './dist/assets/configs-docker'
-      ]
+        './dist/assets/configs-docker',
+      ],
     }),
     copy({
       assets: [
         {
           from: ['./src/assets/config.json'],
-          to: ['./assets']
+          to: ['./assets'],
         },
         {
           from: ['./src/assets/idtags!(-template)*.json'],
-          to: ['./assets']
+          to: ['./assets'],
         },
         {
           from: ['./src/assets/json-schemas/**/*.json'],
-          to: ['./assets/json-schemas']
+          to: ['./assets/json-schemas'],
         },
         {
           from: ['./src/assets/station-templates/**/*.json'],
-          to: ['./assets/station-templates']
+          to: ['./assets/station-templates'],
         },
         {
           from: ['./src/assets/configs-docker/*.json'],
-          to: ['./assets/configs-docker']
-        }
-      ]
-    })
-  ]
+          to: ['./assets/configs-docker'],
+        },
+      ],
+    }),
+  ],
+  sourcemap,
+  treeShaking: true,
 })
 console.timeEnd('Build time')

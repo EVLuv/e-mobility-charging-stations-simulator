@@ -1,32 +1,32 @@
 import type { ChargingStationTemplate } from './ChargingStationTemplate.js'
 import type { FirmwareStatus } from './ocpp/Requests.js'
 
-export type ChargingStationInfo = Omit<
-ChargingStationTemplate,
-| 'Connectors'
-| 'Evses'
-| 'Configuration'
-| 'AutomaticTransactionGenerator'
-| 'numberOfConnectors'
-| 'power'
-| 'powerUnit'
-| 'chargeBoxSerialNumberPrefix'
-| 'chargePointSerialNumberPrefix'
-| 'meterSerialNumberPrefix'
-> & {
-  hashId: string
-  templateIndex: number
-  templateName: string
-  /** @deprecated Use `hashId` instead. */
-  infoHash?: string
-  chargingStationId?: string
+export type ChargingStationInfo = {
   chargeBoxSerialNumber?: string
   chargePointSerialNumber?: string
-  meterSerialNumber?: string
-  maximumPower?: number // Always in Watt
-  maximumAmperage?: number // Always in Ampere
+  chargingStationId?: string
   firmwareStatus?: FirmwareStatus
-}
+  hashId: string
+  /** @deprecated Use `hashId` instead. */
+  infoHash?: string
+  maximumAmperage?: number // Always in Ampere
+  maximumPower?: number // Always in Watt
+  meterSerialNumber?: string
+  templateIndex: number
+  templateName: string
+} & Omit<
+  ChargingStationTemplate,
+  | 'AutomaticTransactionGenerator'
+  | 'chargeBoxSerialNumberPrefix'
+  | 'chargePointSerialNumberPrefix'
+  | 'Configuration'
+  | 'Connectors'
+  | 'Evses'
+  | 'meterSerialNumberPrefix'
+  | 'numberOfConnectors'
+  | 'power'
+  | 'powerUnit'
+>
 
 export interface ChargingStationInfoConfiguration {
   stationInfo?: ChargingStationInfo

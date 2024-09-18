@@ -1,11 +1,21 @@
 <template>
-  <h1 id="action">Add Charging Stations</h1>
+  <h1 id="action">
+    Add Charging Stations
+  </h1>
   <p>Template:</p>
-  <select :key="state.renderTemplates" v-model="state.template">
-    <option disabled value="">Please select a template</option>
+  <select
+    :key="state.renderTemplates"
+    v-model="state.template"
+  >
     <option
-      v-for="template in $templates.value"
-      v-show="Array.isArray($templates.value) && $templates.value.length > 0"
+      disabled
+      value=""
+    >
+      Please select a template
+    </option>
+    <option
+      v-for="template in $templates!.value"
+      v-show="Array.isArray($templates?.value) && $templates.value.length > 0"
       :key="template"
     >
       {{ template }}
@@ -15,11 +25,11 @@
   <input
     id="number-of-stations"
     v-model="state.numberOfStations"
-    type="number"
     min="1"
     name="number-of-stations"
     placeholder="number of stations"
-  />
+    type="number"
+  >
   <p>Template options overrides:</p>
   <ul id="template-options">
     <li>
@@ -27,55 +37,60 @@
       <input
         id="supervision-url"
         v-model.trim="state.supervisionUrl"
-        type="url"
         name="supervision-url"
         placeholder="wss://"
-      />
+        type="url"
+      >
     </li>
     <li>
       Auto start:
-      <input v-model="state.autoStart" type="checkbox" true-value="true" false-value="false" />
+      <input
+        v-model="state.autoStart"
+        false-value="false"
+        true-value="true"
+        type="checkbox"
+      >
     </li>
     <li>
       Persistent configuration:
       <input
         v-model="state.persistentConfiguration"
-        type="checkbox"
-        true-value="true"
         false-value="false"
-      />
+        true-value="true"
+        type="checkbox"
+      >
     </li>
     <li>
       OCPP strict compliance:
       <input
         v-model="state.ocppStrictCompliance"
-        type="checkbox"
-        true-value="true"
         false-value="false"
-      />
+        true-value="true"
+        type="checkbox"
+      >
     </li>
     <li>
       Performance statistics:
       <input
         v-model="state.enableStatistics"
-        type="checkbox"
-        true-value="true"
         false-value="false"
-      />
+        true-value="true"
+        type="checkbox"
+      >
     </li>
   </ul>
-  <br />
+  <br>
   <Button
     id="action-button"
     @click="
       () => {
         $uiClient
-          .addChargingStations(state.template, state.numberOfStations, {
+          ?.addChargingStations(state.template, state.numberOfStations, {
             supervisionUrls: state.supervisionUrl.length > 0 ? state.supervisionUrl : undefined,
             autoStart: convertToBoolean(state.autoStart),
             persistentConfiguration: convertToBoolean(state.persistentConfiguration),
             ocppStrictCompliance: convertToBoolean(state.ocppStrictCompliance),
-            enableStatistics: convertToBoolean(state.enableStatistics)
+            enableStatistics: convertToBoolean(state.enableStatistics),
           })
           .then(() => {
             $toast.success('Charging stations successfully added')
@@ -95,32 +110,31 @@
 </template>
 
 <script setup lang="ts">
-import { getCurrentInstance, ref, watch } from 'vue'
-
 import Button from '@/components/buttons/Button.vue'
 import { convertToBoolean, randomUUID } from '@/composables'
+import { getCurrentInstance, ref, watch } from 'vue'
 
 const state = ref<{
-  renderTemplates: `${string}-${string}-${string}-${string}-${string}`
-  template: string
-  numberOfStations: number
-  supervisionUrl: string
   autoStart: boolean
-  persistentConfiguration: boolean
-  ocppStrictCompliance: boolean
   enableStatistics: boolean
+  numberOfStations: number
+  ocppStrictCompliance: boolean
+  persistentConfiguration: boolean
+  renderTemplates: `${string}-${string}-${string}-${string}-${string}`
+  supervisionUrl: string
+  template: string
 }>({
-  renderTemplates: randomUUID(),
-  template: '',
-  numberOfStations: 1,
-  supervisionUrl: '',
   autoStart: false,
-  persistentConfiguration: true,
+  enableStatistics: false,
+  numberOfStations: 1,
   ocppStrictCompliance: true,
-  enableStatistics: false
+  persistentConfiguration: true,
+  renderTemplates: randomUUID(),
+  supervisionUrl: '',
+  template: '',
 })
 
-watch(getCurrentInstance()!.appContext.config.globalProperties.$templates, () => {
+watch(getCurrentInstance()!.appContext.config.globalProperties!.$templates, () => {
   state.value.renderTemplates = randomUUID()
 })
 </script>

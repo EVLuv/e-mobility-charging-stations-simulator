@@ -1,9 +1,13 @@
 <template>
   <tr class="connectors-table__row">
-    <td class="connectors-table__column">{{ connectorId }}</td>
-    <td class="connectors-table__column">{{ connector.status ?? 'Ø' }}</td>
     <td class="connectors-table__column">
-      {{ connector.transactionStarted === true ? 'Yes' : 'No' }}
+      {{ connectorId }}
+    </td>
+    <td class="connectors-table__column">
+      {{ connector.status ?? 'Ø' }}
+    </td>
+    <td class="connectors-table__column">
+      {{ connector.transactionStarted === true ? `Yes (${connector.transactionId})` : 'No' }}
     </td>
     <td class="connectors-table__column">
       {{ atgStatus?.start === true ? 'Yes' : 'No' }}
@@ -11,20 +15,20 @@
     <td class="connectors-table__column">
       <ToggleButton
         :id="`${hashId}-${connectorId}-start-transaction`"
-        :shared="true"
-        :on="
-          () => {
-            $router.push({
-              name: 'start-transaction',
-              params: { hashId, chargingStationId, connectorId }
-            })
-          }
-        "
         :off="
           () => {
             $router.push({ name: 'charging-stations' })
           }
         "
+        :on="
+          () => {
+            $router.push({
+              name: 'start-transaction',
+              params: { hashId, chargingStationId, connectorId },
+            })
+          }
+        "
+        :shared="true"
         @clicked="
           () => {
             $emit('need-refresh')
@@ -33,27 +37,33 @@
       >
         Start Transaction
       </ToggleButton>
-      <Button @click="stopTransaction()">Stop Transaction</Button>
-      <Button @click="startAutomaticTransactionGenerator()">Start ATG</Button>
-      <Button @click="stopAutomaticTransactionGenerator()">Stop ATG</Button>
+      <Button @click="stopTransaction()">
+        Stop Transaction
+      </Button>
+      <Button @click="startAutomaticTransactionGenerator()">
+        Start ATG
+      </Button>
+      <Button @click="stopAutomaticTransactionGenerator()">
+        Stop ATG
+      </Button>
     </td>
   </tr>
 </template>
 
 <script setup lang="ts">
-import { useToast } from 'vue-toast-notification'
+import type { ConnectorStatus, Status } from '@/types'
 
 import Button from '@/components/buttons/Button.vue'
 import ToggleButton from '@/components/buttons/ToggleButton.vue'
 import { useUIClient } from '@/composables'
-import type { ConnectorStatus, Status } from '@/types'
+import { useToast } from 'vue-toast-notification'
 
 const props = defineProps<{
-  hashId: string
-  chargingStationId: string
-  connectorId: number
-  connector: ConnectorStatus
   atgStatus?: Status
+  chargingStationId: string
+  connector: ConnectorStatus
+  connectorId: number
+  hashId: string
 }>()
 
 const $emit = defineEmits(['need-refresh'])
@@ -66,7 +76,7 @@ const stopTransaction = (): void => {
   uiClient
     .stopTransaction(props.hashId, props.connector.transactionId)
     .then(() => {
-      $toast.success('Transaction successfully stopped')
+      return $toast.success('Transaction successfully stopped')
     })
     .catch((error: Error) => {
       $toast.error('Error at stopping transaction')
@@ -77,7 +87,7 @@ const startAutomaticTransactionGenerator = (): void => {
   uiClient
     .startAutomaticTransactionGenerator(props.hashId, props.connectorId)
     .then(() => {
-      $toast.success('Automatic transaction generator successfully started')
+      return $toast.success('Automatic transaction generator successfully started')
     })
     .catch((error: Error) => {
       $toast.error('Error at starting automatic transaction generator')
@@ -88,7 +98,7 @@ const stopAutomaticTransactionGenerator = (): void => {
   uiClient
     .stopAutomaticTransactionGenerator(props.hashId, props.connectorId)
     .then(() => {
-      $toast.success('Automatic transaction generator successfully stopped')
+      return $toast.success('Automatic transaction generator successfully stopped')
     })
     .catch((error: Error) => {
       $toast.error('Error at stopping automatic transaction generator')

@@ -1,15 +1,16 @@
 import type { ConfigurationKey, ConfigurationKeyType } from '../types/index.js'
-import { logger } from '../utils/index.js'
 import type { ChargingStation } from './ChargingStation.js'
+
+import { logger } from '../utils/index.js'
 
 interface ConfigurationKeyOptions {
   readonly?: boolean
-  visible?: boolean
   reboot?: boolean
+  visible?: boolean
 }
 interface DeleteConfigurationKeyParams {
-  save?: boolean
   caseInsensitive?: boolean
+  save?: boolean
 }
 interface AddConfigurationKeyParams {
   overwrite?: boolean
@@ -39,16 +40,16 @@ export const addConfigurationKey = (
   options = {
     ...{
       readonly: false,
+      reboot: false,
       visible: true,
-      reboot: false
     },
-    ...options
+    ...options,
   }
   params = { ...{ overwrite: false, save: false }, ...params }
   let keyFound = getConfigurationKey(chargingStation, key)
-  if (keyFound != null && params.overwrite === true) {
+  if (keyFound != null && params.overwrite) {
     deleteConfigurationKey(chargingStation, keyFound.key, {
-      save: false
+      save: false,
     })
     keyFound = undefined
   }
@@ -57,11 +58,11 @@ export const addConfigurationKey = (
       key,
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       readonly: options.readonly!,
+      reboot: options.reboot,
       value,
       visible: options.visible,
-      reboot: options.reboot
     })
-    params.save === true && chargingStation.saveOcppConfiguration()
+    params.save && chargingStation.saveOcppConfiguration()
   } else {
     logger.error(
       `${chargingStation.logPrefix()} Trying to add an already existing configuration key: %j`,
@@ -98,14 +99,14 @@ export const deleteConfigurationKey = (
   key: ConfigurationKeyType,
   params?: DeleteConfigurationKeyParams
 ): ConfigurationKey[] | undefined => {
-  params = { ...{ save: true, caseInsensitive: false }, ...params }
+  params = { ...{ caseInsensitive: false, save: true }, ...params }
   const keyFound = getConfigurationKey(chargingStation, key, params.caseInsensitive)
   if (keyFound != null) {
     const deletedConfigurationKey = chargingStation.ocppConfiguration?.configurationKey?.splice(
       chargingStation.ocppConfiguration.configurationKey.indexOf(keyFound),
       1
     )
-    params.save === true && chargingStation.saveOcppConfiguration()
+    params.save && chargingStation.saveOcppConfiguration()
     return deletedConfigurationKey
   }
 }

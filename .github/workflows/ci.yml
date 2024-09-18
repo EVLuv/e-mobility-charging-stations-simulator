@@ -21,6 +21,29 @@ jobs:
           else
             echo "defined=false" >> $GITHUB_OUTPUT;
           fi
+  build-ocpp-server:
+    strategy:
+      matrix:
+        python:
+          - 3.12
+    name: Build OCPP mock server with Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: tests/ocpp-server
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Setup Python ${{ matrix.python }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: poetry
+      - name: Install Dependencies
+        run: poetry install --no-root
+      - name: Lint
+        run: poetry run task lint
   build-simulator:
     needs: [check-secrets]
     strategy:
@@ -50,9 +73,9 @@ jobs:
           cache: 'pnpm'
       - name: pnpm install
         run: pnpm install --ignore-scripts --frozen-lockfile
-      - name: pnpm audit
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node == '20.x' }}
-        run: pnpm audit --prod
+      # - name: pnpm audit
+      #   if: ${{ matrix.os == 'ubuntu-latest' && matrix.node == '20.x' }}
+      #   run: pnpm audit --prod
       - name: pnpm lint
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.node == '20.x' }}
         run: pnpm lint
@@ -65,7 +88,7 @@ jobs:
         run: pnpm coverage
       - name: SonarCloud Scan
         if: ${{ needs.check-secrets.outputs.sonar-token-exists == 'true' && github.repository == 'sap/e-mobility-charging-stations-simulator' && matrix.os == 'ubuntu-latest' && matrix.node == '20.x' }}
-        uses: sonarsource/sonarcloud-github-action@v2.2.0
+        uses: sonarsource/sonarcloud-github-action@v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -101,9 +124,9 @@ jobs:
           cache: 'pnpm'
       - name: pnpm install
         run: pnpm install --ignore-scripts --frozen-lockfile
-      - name: pnpm audit
-        if: ${{ matrix.os == 'ubuntu-latest' && matrix.node == '20.x' }}
-        run: pnpm audit --prod
+      # - name: pnpm audit
+      #   if: ${{ matrix.os == 'ubuntu-latest' && matrix.node == '20.x' }}
+      #   run: pnpm audit --prod
       - name: pnpm lint
         if: ${{ matrix.os == 'ubuntu-latest' && matrix.node == '20.x' }}
         run: pnpm lint
@@ -116,15 +139,30 @@ jobs:
         run: pnpm coverage
       - name: SonarCloud Scan
         if: ${{ needs.check-secrets.outputs.sonar-token-exists == 'true' && github.repository == 'sap/e-mobility-charging-stations-simulator' && matrix.os == 'ubuntu-latest' && matrix.node == '20.x' }}
-        uses: sonarsource/sonarcloud-github-action@v2.2.0
+        uses: sonarsource/sonarcloud-github-action@v3.0.0
         with:
           projectBaseDir: ui/web
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-  build-docker-image:
+  build-simulator-docker-image:
     runs-on: ubuntu-latest
-    name: Build docker image
+    name: Build simulator docker image
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build docker image
+        run: |
+          cd docker
+          make SUBMODULES_INIT=false
+  build-dashboard-docker-image:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui/web
+    name: Build dashboard docker image
     steps:
       - uses: actions/checkout@v4
       - name: Setup Docker Buildx

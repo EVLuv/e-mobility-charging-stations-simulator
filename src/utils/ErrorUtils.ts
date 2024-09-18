@@ -1,6 +1,5 @@
-import process from 'node:process'
-
 import chalk from 'chalk'
+import process from 'node:process'
 
 import type { ChargingStation } from '../charging-station/index.js'
 import type {
@@ -9,15 +8,15 @@ import type {
   HandleErrorParams,
   IncomingRequestCommand,
   JsonType,
-  RequestCommand
+  MessageType,
+  RequestCommand,
 } from '../types/index.js'
+
+import { getMessageTypeString } from '../charging-station/ocpp/OCPPServiceUtils.js'
 import { logger } from './Logger.js'
 import { isNotEmptyString } from './Utils.js'
 
-const defaultErrorParams = {
-  throwError: true,
-  consoleOut: false
-} satisfies HandleErrorParams<EmptyObject>
+const moduleName = 'ErrorUtils'
 
 export const handleUncaughtException = (): void => {
   process.on('uncaughtException', (error: Error) => {
@@ -36,9 +35,15 @@ export const handleFileException = (
   fileType: FileType,
   error: NodeJS.ErrnoException,
   logPrefix: string,
-  params: HandleErrorParams<EmptyObject> = defaultErrorParams
+  params?: HandleErrorParams<EmptyObject>
 ): void => {
-  setDefaultErrorParams(params)
+  params = {
+    ...{
+      consoleOut: false,
+      throwError: true,
+    },
+    ...params,
+  }
   const prefix = isNotEmptyString(logPrefix) ? `${logPrefix} ` : ''
   let logMsg: string
   switch (error.code) {
@@ -78,24 +83,51 @@ export const handleFileException = (
 
 export const handleSendMessageError = (
   chargingStation: ChargingStation,
-  commandName: RequestCommand | IncomingRequestCommand,
+  commandName: IncomingRequestCommand | RequestCommand,
+  messageType: MessageType,
   error: Error,
-  params: HandleErrorParams<EmptyObject> = {
-    throwError: false,
-    consoleOut: false
-  }
+  params?: HandleErrorParams<EmptyObject>
 ): void => {
-  setDefaultErrorParams(params, { throwError: false, consoleOut: false })
-  logger.error(`${chargingStation.logPrefix()} Request command '${commandName}' error:`, error)
+  params = {
+    ...{
+      consoleOut: false,
+      throwError: false,
+    },
+    ...params,
+  }
+  logger.error(
+    `${chargingStation.logPrefix()} ${moduleName}.handleSendMessageError: Send ${getMessageTypeString(messageType)} command '${commandName}' error:`,
+    error
+  )
   if (params.throwError === true) {
     throw error
   }
 }
 
-export const setDefaultErrorParams = <T extends JsonType>(
-  params: HandleErrorParams<T>,
-  defaultParams: HandleErrorParams<T> = defaultErrorParams
-): HandleErrorParams<T> => {
-  params = { ...defaultParams, ...params }
-  return params
+export const handleIncomingRequestError = <T extends JsonType>(
+  chargingStation: ChargingStation,
+  commandName: IncomingRequestCommand,
+  error: Error,
+  params?: HandleErrorParams<T>
+): T | undefined => {
+  params = {
+    ...{
+      consoleOut: false,
+      throwError: true,
+    },
+    ...params,
+  }
+  logger.error(
+    `${chargingStation.logPrefix()} ${moduleName}.handleIncomingRequestError: Incoming request command '${commandName}' error:`,
+    error
+  )
+  if (params.throwError === false && params.errorResponse != null) {
+    return params.errorResponse
+  }
+  if (params.throwError === true && params.errorResponse == null) {
+    throw error
+  }
+  if (params.throwError === true && params.errorResponse != null) {
+    return params.errorResponse
+  }
 }

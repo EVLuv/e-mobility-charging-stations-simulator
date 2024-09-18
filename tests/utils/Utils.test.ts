@@ -1,13 +1,14 @@
-import { randomInt } from 'node:crypto'
-import { version } from 'node:process'
-import { describe, it } from 'node:test'
-
 import { hoursToMilliseconds, hoursToSeconds } from 'date-fns'
 import { expect } from 'expect'
 import { CircularBuffer } from 'mnemonist'
+import { randomInt } from 'node:crypto'
+import { version } from 'node:process'
+import { describe, it } from 'node:test'
 import { satisfies } from 'semver'
 
 import type { TimestampedData } from '../../src/types/index.js'
+
+import { runtime, runtimes } from '../../scripts/runtime.js'
 import { Constants } from '../../src/utils/Constants.js'
 import {
   clone,
@@ -21,6 +22,7 @@ import {
   generateUUID,
   getRandomFloat,
   hasOwnProp,
+  insertAt,
   isArraySorted,
   isAsyncFunction,
   isNotEmptyArray,
@@ -30,7 +32,7 @@ import {
   roundTo,
   secureRandom,
   sleep,
-  validateUUID
+  validateUUID,
 } from '../../src/utils/Utils.js'
 
 await describe('Utils test suite', async () => {
@@ -231,7 +233,6 @@ await describe('Utils test suite', async () => {
     expect(isAsyncFunction('')).toBe(false)
     expect(isAsyncFunction([])).toBe(false)
     expect(isAsyncFunction(new Date())).toBe(false)
-    // eslint-disable-next-line prefer-regex-literals
     expect(isAsyncFunction(/[a-z]/i)).toBe(false)
     expect(isAsyncFunction(new Error())).toBe(false)
     expect(isAsyncFunction(new Map())).toBe(false)
@@ -273,17 +274,17 @@ await describe('Utils test suite', async () => {
     expect(isAsyncFunction(async function named () {})).toBe(true)
     class TestClass {
       // eslint-disable-next-line @typescript-eslint/no-empty-function
-      public testSync (): void {}
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      public async testAsync (): Promise<void> {}
+      public testArrowAsync = async (): Promise<void> => {}
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       public testArrowSync = (): void => {}
       // eslint-disable-next-line @typescript-eslint/no-empty-function
-      public testArrowAsync = async (): Promise<void> => {}
+      public static async testStaticAsync (): Promise<void> {}
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       public static testStaticSync (): void {}
       // eslint-disable-next-line @typescript-eslint/no-empty-function
-      public static async testStaticAsync (): Promise<void> {}
+      public async testAsync (): Promise<void> {}
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      public testSync (): void {}
     }
     const testClass = new TestClass()
     // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -314,7 +315,7 @@ await describe('Utils test suite', async () => {
     const date = new Date()
     expect(clone(date)).toStrictEqual(date)
     expect(clone(date) === date).toBe(false)
-    if (satisfies(version, '>=21.0.0')) {
+    if (runtime === runtimes.node && satisfies(version, '>=22.0.0')) {
       const url = new URL('https://domain.tld')
       expect(() => clone(url)).toThrowError(new Error('Cannot clone object of unsupported type.'))
     }
@@ -380,17 +381,14 @@ await describe('Utils test suite', async () => {
     expect(isNotEmptyArray(new WeakSet())).toBe(false)
   })
 
+  await it('Verify insertAt()', () => {
+    expect(insertAt('test', 'ing', 'test'.length)).toBe('testing')
+    expect(insertAt('test', 'ing', 2)).toBe('teingst')
+  })
+
   await it('Verify isArraySorted()', () => {
-    expect(
-      isArraySorted([], (a, b) => {
-        return a - b
-      })
-    ).toBe(true)
-    expect(
-      isArraySorted([1], (a, b) => {
-        return a - b
-      })
-    ).toBe(true)
+    expect(isArraySorted<number>([], (a, b) => a - b)).toBe(true)
+    expect(isArraySorted<number>([1], (a, b) => a - b)).toBe(true)
     expect(isArraySorted<number>([1, 2, 3, 4, 5], (a, b) => a - b)).toBe(true)
     expect(isArraySorted<number>([1, 2, 3, 5, 4], (a, b) => a - b)).toBe(false)
     expect(isArraySorted<number>([2, 1, 3, 4, 5], (a, b) => a - b)).toBe(false)

@@ -3,6 +3,7 @@
 import type { ValidateFunction } from 'ajv'
 
 import type { ChargingStation } from '../../../charging-station/index.js'
+
 import { OCPPError } from '../../../exception/index.js'
 import {
   ErrorType,
@@ -10,7 +11,7 @@ import {
   type JsonType,
   type OCPP20ClearCacheRequest,
   OCPP20IncomingRequestCommand,
-  OCPPVersion
+  OCPPVersion,
 } from '../../../types/index.js'
 import { isAsyncFunction, logger } from '../../../utils/index.js'
 import { OCPPIncomingRequestService } from '../OCPPIncomingRequestService.js'
@@ -22,8 +23,8 @@ export class OCPP20IncomingRequestService extends OCPPIncomingRequestService {
   protected payloadValidateFunctions: Map<OCPP20IncomingRequestCommand, ValidateFunction<JsonType>>
 
   private readonly incomingRequestHandlers: Map<
-  OCPP20IncomingRequestCommand,
-  IncomingRequestHandler
+    OCPP20IncomingRequestCommand,
+    IncomingRequestHandler
   >
 
   public constructor () {
@@ -32,28 +33,41 @@ export class OCPP20IncomingRequestService extends OCPPIncomingRequestService {
     // }
     super(OCPPVersion.VERSION_201)
     this.incomingRequestHandlers = new Map<OCPP20IncomingRequestCommand, IncomingRequestHandler>([
-      [OCPP20IncomingRequestCommand.CLEAR_CACHE, this.handleRequestClearCache.bind(this)]
+      [OCPP20IncomingRequestCommand.CLEAR_CACHE, this.handleRequestClearCache.bind(this)],
     ])
     this.payloadValidateFunctions = new Map<
-    OCPP20IncomingRequestCommand,
-    ValidateFunction<JsonType>
+      OCPP20IncomingRequestCommand,
+      ValidateFunction<JsonType>
     >([
       [
         OCPP20IncomingRequestCommand.CLEAR_CACHE,
-        this.ajv
-          .compile(
-            OCPP20ServiceUtils.parseJsonSchemaFile<OCPP20ClearCacheRequest>(
-              'assets/json-schemas/ocpp/2.0/ClearCacheRequest.json',
-              moduleName,
-              'constructor'
-            )
+        this.ajv.compile(
+          OCPP20ServiceUtils.parseJsonSchemaFile<OCPP20ClearCacheRequest>(
+            'assets/json-schemas/ocpp/2.0/ClearCacheRequest.json',
+            moduleName,
+            'constructor'
           )
-          .bind(this)
-      ]
+        ),
+      ],
     ])
     this.validatePayload = this.validatePayload.bind(this)
   }
 
+  private validatePayload (
+    chargingStation: ChargingStation,
+    commandName: OCPP20IncomingRequestCommand,
+    commandPayload: JsonType
+  ): boolean {
+    if (this.payloadValidateFunctions.has(commandName)) {
+      return this.validateIncomingRequestPayload(chargingStation, commandName, commandPayload)
+    }
+    logger.warn(
+      `${chargingStation.logPrefix()} ${moduleName}.validatePayload: No JSON schema validation function found for command '${commandName}' PDU validation`
+    )
+    return false
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
   public async incomingRequestHandler<ReqType extends JsonType, ResType extends JsonType>(
     chargingStation: ChargingStation,
     messageId: string,
@@ -109,7 +123,7 @@ export class OCPP20IncomingRequestService extends OCPPIncomingRequestService {
         // Throw exception
         throw new OCPPError(
           ErrorType.NOT_IMPLEMENTED,
-          `'${commandName}' is not implemented to handle request PDU ${JSON.stringify(
+          `${commandName} is not implemented to handle request PDU ${JSON.stringify(
             commandPayload,
             undefined,
             2
@@ -139,19 +153,5 @@ export class OCPP20IncomingRequestService extends OCPPIncomingRequestService {
     )
     // Emit command name event to allow delayed handling
     this.emit(commandName, chargingStation, commandPayload, response)
-  }
-
-  private validatePayload (
-    chargingStation: ChargingStation,
-    commandName: OCPP20IncomingRequestCommand,
-    commandPayload: JsonType
-  ): boolean {
-    if (this.payloadValidateFunctions.has(commandName)) {
-      return this.validateIncomingRequestPayload(chargingStation, commandName, commandPayload)
-    }
-    logger.warn(
-      `${chargingStation.logPrefix()} ${moduleName}.validatePayload: No JSON schema validation function found for command '${commandName}' PDU validation`
-    )
-    return false
   }
 }

@@ -1,6 +1,5 @@
-import { getRandomValues } from 'node:crypto'
-
 import chalk from 'chalk'
+import { getRandomValues } from 'node:crypto'
 
 export const sleep = async (milliSeconds: number): Promise<NodeJS.Timeout> => {
   return await new Promise<NodeJS.Timeout>(resolve =>
@@ -31,7 +30,6 @@ export const randomizeDelay = (delay: number): number => {
 
 /**
  * Generates a cryptographically secure random number in the [0,1[ range
- *
  * @returns A number in the [0,1[ range
  * @internal
  */

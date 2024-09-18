@@ -1,21 +1,23 @@
 <template>
-  <h1 id="action">Set Supervision Url</h1>
+  <h1 id="action">
+    Set Supervision Url
+  </h1>
   <h2>{{ chargingStationId }}</h2>
   <p>Supervision Url:</p>
   <input
     id="supervision-url"
     v-model.trim="state.supervisionUrl"
-    type="url"
     name="supervision-url"
     placeholder="wss://"
-  />
-  <br />
+    type="url"
+  >
+  <br>
   <Button
     id="action-button"
     @click="
       () => {
         $uiClient
-          .setSupervisionUrl(hashId, state.supervisionUrl)
+          ?.setSupervisionUrl(hashId, state.supervisionUrl)
           .then(() => {
             $toast.success('Supervision url successfully set')
           })
@@ -34,17 +36,16 @@
 </template>
 
 <script setup lang="ts">
+import Button from '@/components/buttons/Button.vue'
 import { ref } from 'vue'
 
-import Button from '@/components/buttons/Button.vue'
-
 defineProps<{
-  hashId: string
   chargingStationId: string
+  hashId: string
 }>()
 
 const state = ref<{ supervisionUrl: string }>({
-  supervisionUrl: ''
+  supervisionUrl: '',
 })
 </script>
 

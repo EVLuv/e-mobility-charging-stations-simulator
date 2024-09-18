@@ -13,7 +13,7 @@ import {
   type ProtocolVersion,
   type RequestPayload,
   ResponseStatus,
-  type UIServerConfiguration
+  type UIServerConfiguration,
 } from '../../types/index.js'
 import {
   Constants,
@@ -21,7 +21,7 @@ import {
   isNotEmptyString,
   JSONStringify,
   logger,
-  logPrefix
+  logPrefix,
 } from '../../utils/index.js'
 import { AbstractUIServer } from './AbstractUIServer.js'
 import { isProtocolAndVersionSupported } from './UIServerUtils.js'
@@ -30,54 +30,12 @@ const moduleName = 'UIHttpServer'
 
 enum HttpMethods {
   GET = 'GET',
-  PUT = 'PUT',
+  PATCH = 'PATCH',
   POST = 'POST',
-  PATCH = 'PATCH'
+  PUT = 'PUT',
 }
 
 export class UIHttpServer extends AbstractUIServer {
-  public constructor (protected readonly uiServerConfiguration: UIServerConfiguration) {
-    super(uiServerConfiguration)
-  }
-
-  public start (): void {
-    this.httpServer.on('request', this.requestListener.bind(this))
-    this.startHttpServer()
-  }
-
-  public sendRequest (request: ProtocolRequest): void {
-    switch (this.uiServerConfiguration.version) {
-      case ApplicationProtocolVersion.VERSION_20:
-        this.httpServer.emit('request', request)
-        break
-    }
-  }
-
-  public sendResponse (response: ProtocolResponse): void {
-    const [uuid, payload] = response
-    try {
-      if (this.hasResponseHandler(uuid)) {
-        const res = this.responseHandlers.get(uuid) as ServerResponse
-        res
-          .writeHead(this.responseStatusToStatusCode(payload.status), {
-            'Content-Type': 'application/json'
-          })
-          .end(JSONStringify(payload, undefined, MapStringifyFormat.object))
-      } else {
-        logger.error(
-          `${this.logPrefix(moduleName, 'sendResponse')} Response for unknown request id: ${uuid}`
-        )
-      }
-    } catch (error) {
-      logger.error(
-        `${this.logPrefix(moduleName, 'sendResponse')} Error at sending response id '${uuid}':`,
-        error
-      )
-    } finally {
-      this.responseHandlers.delete(uuid)
-    }
-  }
-
   public logPrefix = (modName?: string, methodName?: string, prefixSuffix?: string): string => {
     const logMsgPrefix = prefixSuffix != null ? `UI HTTP Server ${prefixSuffix}` : 'UI HTTP Server'
     const logMsg =
@@ -87,15 +45,19 @@ export class UIHttpServer extends AbstractUIServer {
     return logPrefix(logMsg)
   }
 
+  public constructor (protected readonly uiServerConfiguration: UIServerConfiguration) {
+    super(uiServerConfiguration)
+  }
+
   private requestListener (req: IncomingMessage, res: ServerResponse): void {
     this.authenticate(req, err => {
       if (err != null) {
         res
           .writeHead(StatusCodes.UNAUTHORIZED, {
             'Content-Type': 'text/plain',
-            'WWW-Authenticate': 'Basic realm=users'
+            'WWW-Authenticate': 'Basic realm=users',
           })
-          .end(`${StatusCodes.UNAUTHORIZED} Unauthorized`)
+          .end(`${StatusCodes.UNAUTHORIZED.toString()} Unauthorized`)
         res.destroy()
         req.destroy()
       }
@@ -133,9 +95,9 @@ export class UIHttpServer extends AbstractUIServer {
             } catch (error) {
               this.sendResponse(
                 this.buildProtocolResponse(uuid, {
-                  status: ResponseStatus.FAILURE,
                   errorMessage: (error as Error).message,
-                  errorStack: (error as Error).stack
+                  errorStack: (error as Error).stack,
+                  status: ResponseStatus.FAILURE,
                 })
               )
               return
@@ -147,10 +109,12 @@ export class UIHttpServer extends AbstractUIServer {
                 if (protocolResponse != null) {
                   this.sendResponse(protocolResponse)
                 }
+                return undefined
               })
               .catch(Constants.EMPTY_FUNCTION)
           })
       } else {
+        // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
         throw new BaseError(`Unsupported HTTP method: '${req.method}'`)
       }
     } catch (error) {
@@ -164,12 +128,50 @@ export class UIHttpServer extends AbstractUIServer {
 
   private responseStatusToStatusCode (status: ResponseStatus): StatusCodes {
     switch (status) {
-      case ResponseStatus.SUCCESS:
-        return StatusCodes.OK
       case ResponseStatus.FAILURE:
         return StatusCodes.BAD_REQUEST
+      case ResponseStatus.SUCCESS:
+        return StatusCodes.OK
       default:
         return StatusCodes.INTERNAL_SERVER_ERROR
     }
+  }
+
+  public sendRequest (request: ProtocolRequest): void {
+    switch (this.uiServerConfiguration.version) {
+      case ApplicationProtocolVersion.VERSION_20:
+        this.httpServer.emit('request', request)
+        break
+    }
+  }
+
+  public sendResponse (response: ProtocolResponse): void {
+    const [uuid, payload] = response
+    try {
+      if (this.hasResponseHandler(uuid)) {
+        const res = this.responseHandlers.get(uuid) as ServerResponse
+        res
+          .writeHead(this.responseStatusToStatusCode(payload.status), {
+            'Content-Type': 'application/json',
+          })
+          .end(JSONStringify(payload, undefined, MapStringifyFormat.object))
+      } else {
+        logger.error(
+          `${this.logPrefix(moduleName, 'sendResponse')} Response for unknown request id: ${uuid}`
+        )
+      }
+    } catch (error) {
+      logger.error(
+        `${this.logPrefix(moduleName, 'sendResponse')} Error at sending response id '${uuid}':`,
+        error
+      )
+    } finally {
+      this.responseHandlers.delete(uuid)
+    }
+  }
+
+  public start (): void {
+    this.httpServer.on('request', this.requestListener.bind(this))
+    this.startHttpServer()
   }
 }

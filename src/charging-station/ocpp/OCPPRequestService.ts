@@ -2,6 +2,8 @@ import _Ajv, { type ValidateFunction } from 'ajv'
 import _ajvFormats from 'ajv-formats'
 
 import type { ChargingStation } from '../../charging-station/index.js'
+import type { OCPPResponseService } from './OCPPResponseService.js'
+
 import { OCPPError } from '../../exception/index.js'
 import { PerformanceStatistics } from '../../performance/index.js'
 import {
@@ -18,17 +20,20 @@ import {
   type RequestParams,
   type Response,
   type ResponseCallback,
-  type ResponseType
+  type ResponseType,
 } from '../../types/index.js'
 import {
   clone,
   formatDurationMilliSeconds,
   handleSendMessageError,
-  logger
+  logger,
 } from '../../utils/index.js'
 import { OCPPConstants } from './OCPPConstants.js'
-import type { OCPPResponseService } from './OCPPResponseService.js'
-import { OCPPServiceUtils } from './OCPPServiceUtils.js'
+import {
+  ajvErrorsToErrorType,
+  convertDateToISOString,
+  getMessageTypeString,
+} from './OCPPServiceUtils.js'
 type Ajv = _Ajv.default
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 const Ajv = _Ajv.default
@@ -38,22 +43,22 @@ const moduleName = 'OCPPRequestService'
 
 const defaultRequestParams: RequestParams = {
   skipBufferingOnError: false,
+  throwError: false,
   triggerMessage: false,
-  throwError: false
 }
 
 export abstract class OCPPRequestService {
-  private static instance: OCPPRequestService | null = null
-  private readonly version: OCPPVersion
-  private readonly ocppResponseService: OCPPResponseService
+  private static instance: null | OCPPRequestService = null
   protected readonly ajv: Ajv
   protected abstract payloadValidateFunctions: Map<RequestCommand, ValidateFunction<JsonType>>
+  private readonly ocppResponseService: OCPPResponseService
+  private readonly version: OCPPVersion
 
   protected constructor (version: OCPPVersion, ocppResponseService: OCPPResponseService) {
     this.version = version
     this.ajv = new Ajv({
       keywords: ['javaType'],
-      multipleOfPrecision: 2
+      multipleOfPrecision: 2,
     })
     ajvFormats(this.ajv)
     this.ocppResponseService = ocppResponseService
@@ -78,54 +83,6 @@ export abstract class OCPPRequestService {
     return OCPPRequestService.instance as T
   }
 
-  public async sendResponse (
-    chargingStation: ChargingStation,
-    messageId: string,
-    messagePayload: JsonType,
-    commandName: IncomingRequestCommand
-  ): Promise<ResponseType> {
-    try {
-      console.log('---- sendResponse ----')
-      console.log('----------------------')
-      // Send response message
-      return await this.internalSendMessage(
-        chargingStation,
-        messageId,
-        messagePayload,
-        MessageType.CALL_RESULT_MESSAGE,
-        commandName
-      )
-    } catch (error) {
-      handleSendMessageError(chargingStation, commandName, error as Error, {
-        throwError: true
-      })
-      return null
-    }
-  }
-
-  public async sendError (
-    chargingStation: ChargingStation,
-    messageId: string,
-    ocppError: OCPPError,
-    commandName: RequestCommand | IncomingRequestCommand
-  ): Promise<ResponseType> {
-    try {
-      console.log('---- sendError ----')
-      console.log('----------------------')
-      // Send error message
-      return await this.internalSendMessage(
-        chargingStation,
-        messageId,
-        ocppError,
-        MessageType.CALL_ERROR_MESSAGE,
-        commandName
-      )
-    } catch (error) {
-      handleSendMessageError(chargingStation, commandName, error as Error)
-      return null
-    }
-  }
-
   protected async sendMessage (
     chargingStation: ChargingStation,
     messageId: string,
@@ -135,7 +92,7 @@ export abstract class OCPPRequestService {
   ): Promise<ResponseType> {
     params = {
       ...defaultRequestParams,
-      ...params
+      ...params,
     }
     console.log('---- sendMessage ----')
     console.log('----------------------')
@@ -149,21 +106,69 @@ export abstract class OCPPRequestService {
         params
       )
     } catch (error) {
-      handleSendMessageError(chargingStation, commandName, error as Error, {
-        throwError: params.throwError
-      })
+      handleSendMessageError(
+        chargingStation,
+        commandName,
+        MessageType.CALL_MESSAGE,
+        error as Error,
+        {
+          throwError: params.throwError,
+        }
+      )
       return null
     }
   }
 
-  private validateRequestPayload<T extends JsonType>(
+  private buildMessageToSend (
     chargingStation: ChargingStation,
-    commandName: RequestCommand | IncomingRequestCommand,
-    payload: T
-  ): boolean {
-    if (chargingStation.stationInfo?.ocppStrictCompliance === false) {
-      return true
+    messageId: string,
+    messagePayload: JsonType | OCPPError,
+    messageType: MessageType,
+    commandName: IncomingRequestCommand | RequestCommand
+  ): string {
+    let messageToSend: string
+    // Type of message
+    switch (messageType) {
+      // Error Message
+      case MessageType.CALL_ERROR_MESSAGE:
+        // Build Error Message
+        messageToSend = JSON.stringify([
+          messageType,
+          messageId,
+          (messagePayload as OCPPError).code,
+          (messagePayload as OCPPError).message,
+          (messagePayload as OCPPError).details ?? {
+            command: (messagePayload as OCPPError).command,
+          },
+        ] satisfies ErrorResponse)
+        break
+      // Request
+      case MessageType.CALL_MESSAGE:
+        // Build request
+        this.validateRequestPayload(chargingStation, commandName, messagePayload as JsonType)
+        messageToSend = JSON.stringify([
+          messageType,
+          messageId,
+          commandName as RequestCommand,
+          messagePayload as JsonType,
+        ] satisfies OutgoingRequest)
+        break
+      // Response
+      case MessageType.CALL_RESULT_MESSAGE:
+        // Build response
+        this.validateIncomingRequestResponsePayload(
+          chargingStation,
+          commandName,
+          messagePayload as JsonType
+        )
+        messageToSend = JSON.stringify([
+          messageType,
+          messageId,
+          messagePayload as JsonType,
+        ] satisfies Response)
+        break
     }
+<<<<<<< HEAD
 
     if (!this.payloadValidateFunctions.has(commandName as RequestCommand)) {
       logger.warn(
@@ -239,6 +244,9 @@ export abstract class OCPPRequestService {
       commandName,
       JSON.stringify(validate?.errors, undefined, 2)
     )
+=======
+    return messageToSend
+>>>>>>> main
   }
 
   private async internalSendMessage (
@@ -246,12 +254,12 @@ export abstract class OCPPRequestService {
     messageId: string,
     messagePayload: JsonType | OCPPError,
     messageType: MessageType,
-    commandName: RequestCommand | IncomingRequestCommand,
+    commandName: IncomingRequestCommand | RequestCommand,
     params?: RequestParams
   ): Promise<ResponseType> {
     params = {
       ...defaultRequestParams,
-      ...params
+      ...params,
     }
     if (
       (chargingStation.inUnknownState() && commandName === RequestCommand.BOOT_NOTIFICATION) ||
@@ -267,7 +275,6 @@ export abstract class OCPPRequestService {
       return await new Promise<ResponseType>((resolve, reject: (reason?: unknown) => void) => {
         /**
          * Function that will receive the request's response
-         *
          * @param payload -
          * @param requestPayload -
          */
@@ -290,17 +297,17 @@ export abstract class OCPPRequestService {
             )
             .then(() => {
               resolve(payload)
+              return undefined
             })
-            .catch(reject)
             .finally(() => {
               chargingStation.requests.delete(messageId)
               chargingStation.emit(ChargingStationEvents.updated)
             })
+            .catch(reject)
         }
 
         /**
          * Function that will receive the request's error response
-         *
          * @param ocppError -
          * @param requestStatistic -
          */
@@ -312,7 +319,7 @@ export abstract class OCPPRequestService {
             )
           }
           logger.error(
-            `${chargingStation.logPrefix()} Error occurred at ${OCPPServiceUtils.getMessageTypeString(
+            `${chargingStation.logPrefix()} Error occurred at ${getMessageTypeString(
               messageType
             )} command ${commandName} with PDU %j:`,
             messagePayload,
@@ -385,7 +392,7 @@ export abstract class OCPPRequestService {
 
             if (error == null) {
               logger.debug(
-                `${chargingStation.logPrefix()} >> Command '${commandName}' sent ${OCPPServiceUtils.getMessageTypeString(
+                `${chargingStation.logPrefix()} >> Command '${commandName}' sent ${getMessageTypeString(
                   messageType
                 )} payload: ${messageToSend}`
               )
@@ -412,9 +419,9 @@ export abstract class OCPPRequestService {
                   }buffered message id '${messageId}' with content '${messageToSend}'`,
                   commandName,
                   {
-                    name: error.name,
                     message: error.message,
-                    stack: error.stack
+                    name: error.name,
+                    stack: error.stack,
                   }
                 )
               )
@@ -436,68 +443,17 @@ export abstract class OCPPRequestService {
     }
     throw new OCPPError(
       ErrorType.SECURITY_ERROR,
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
       `Cannot send command ${commandName} PDU when the charging station is in ${chargingStation.bootNotificationResponse?.status} state on the central server`,
       commandName
     )
-  }
-
-  private buildMessageToSend (
-    chargingStation: ChargingStation,
-    messageId: string,
-    messagePayload: JsonType | OCPPError,
-    messageType: MessageType,
-    commandName: RequestCommand | IncomingRequestCommand
-  ): string {
-    let messageToSend: string
-    // Type of message
-    switch (messageType) {
-      // Request
-      case MessageType.CALL_MESSAGE:
-        // Build request
-        this.validateRequestPayload(chargingStation, commandName, messagePayload as JsonType)
-        messageToSend = JSON.stringify([
-          messageType,
-          messageId,
-          commandName as RequestCommand,
-          messagePayload as JsonType
-        ] satisfies OutgoingRequest)
-        break
-      // Response
-      case MessageType.CALL_RESULT_MESSAGE:
-        // Build response
-        this.validateIncomingRequestResponsePayload(
-          chargingStation,
-          commandName,
-          messagePayload as JsonType
-        )
-        messageToSend = JSON.stringify([
-          messageType,
-          messageId,
-          messagePayload as JsonType
-        ] satisfies Response)
-        break
-      // Error Message
-      case MessageType.CALL_ERROR_MESSAGE:
-        // Build Error Message
-        messageToSend = JSON.stringify([
-          messageType,
-          messageId,
-          (messagePayload as OCPPError).code,
-          (messagePayload as OCPPError).message,
-          (messagePayload as OCPPError).details ?? {
-            command: (messagePayload as OCPPError).command
-          }
-        ] satisfies ErrorResponse)
-        break
-    }
-    return messageToSend
   }
 
   private setCachedRequest (
     chargingStation: ChargingStation,
     messageId: string,
     messagePayload: JsonType,
-    commandName: RequestCommand | IncomingRequestCommand,
+    commandName: IncomingRequestCommand | RequestCommand,
     responseCallback: ResponseCallback,
     errorCallback: ErrorCallback
   ): void {
@@ -505,14 +461,144 @@ export abstract class OCPPRequestService {
       responseCallback,
       errorCallback,
       commandName,
-      messagePayload
+      messagePayload,
     ])
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
+  private validateIncomingRequestResponsePayload<T extends JsonType>(
+    chargingStation: ChargingStation,
+    commandName: IncomingRequestCommand | RequestCommand,
+    payload: T
+  ): boolean {
+    if (chargingStation.stationInfo?.ocppStrictCompliance === false) {
+      return true
+    }
+    if (
+      !this.ocppResponseService.incomingRequestResponsePayloadValidateFunctions.has(
+        commandName as IncomingRequestCommand
+      )
+    ) {
+      logger.warn(
+        `${chargingStation.logPrefix()} ${moduleName}.validateIncomingRequestResponsePayload: No JSON schema validation function found for command '${commandName}' PDU validation`
+      )
+      return true
+    }
+    const validate = this.ocppResponseService.incomingRequestResponsePayloadValidateFunctions.get(
+      commandName as IncomingRequestCommand
+    )
+    payload = clone<T>(payload)
+    convertDateToISOString<T>(payload)
+    if (validate?.(payload) === true) {
+      return true
+    }
+    logger.error(
+      `${chargingStation.logPrefix()} ${moduleName}.validateIncomingRequestResponsePayload: Command '${commandName}' incoming request response PDU is invalid: %j`,
+      validate?.errors
+    )
+    // OCPPError usage here is debatable: it's an error in the OCPP stack but not targeted to sendError().
+    throw new OCPPError(
+      ajvErrorsToErrorType(validate?.errors),
+      'Incoming request response PDU is invalid',
+      commandName,
+      JSON.stringify(validate?.errors, undefined, 2)
+    )
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
+  private validateRequestPayload<T extends JsonType>(
+    chargingStation: ChargingStation,
+    commandName: IncomingRequestCommand | RequestCommand,
+    payload: T
+  ): boolean {
+    if (chargingStation.stationInfo?.ocppStrictCompliance === false) {
+      return true
+    }
+    if (!this.payloadValidateFunctions.has(commandName as RequestCommand)) {
+      logger.warn(
+        `${chargingStation.logPrefix()} ${moduleName}.validateRequestPayload: No JSON schema found for command '${commandName}' PDU validation`
+      )
+      return true
+    }
+    const validate = this.payloadValidateFunctions.get(commandName as RequestCommand)
+    payload = clone<T>(payload)
+    convertDateToISOString<T>(payload)
+    if (validate?.(payload) === true) {
+      return true
+    }
+    logger.error(
+      `${chargingStation.logPrefix()} ${moduleName}.validateRequestPayload: Command '${commandName}' request PDU is invalid: %j`,
+      validate?.errors
+    )
+    // OCPPError usage here is debatable: it's an error in the OCPP stack but not targeted to sendError().
+    throw new OCPPError(
+      ajvErrorsToErrorType(validate?.errors),
+      'Request PDU is invalid',
+      commandName,
+      JSON.stringify(validate?.errors, undefined, 2)
+    )
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
   public abstract requestHandler<ReqType extends JsonType, ResType extends JsonType>(
     chargingStation: ChargingStation,
     commandName: RequestCommand,
     commandParams?: ReqType,
     params?: RequestParams
   ): Promise<ResType>
+
+  public async sendError (
+    chargingStation: ChargingStation,
+    messageId: string,
+    ocppError: OCPPError,
+    commandName: IncomingRequestCommand | RequestCommand
+  ): Promise<ResponseType> {
+    try {
+      // Send error message
+      return await this.internalSendMessage(
+        chargingStation,
+        messageId,
+        ocppError,
+        MessageType.CALL_ERROR_MESSAGE,
+        commandName
+      )
+    } catch (error) {
+      handleSendMessageError(
+        chargingStation,
+        commandName,
+        MessageType.CALL_ERROR_MESSAGE,
+        error as Error
+      )
+      return null
+    }
+  }
+
+  public async sendResponse (
+    chargingStation: ChargingStation,
+    messageId: string,
+    messagePayload: JsonType,
+    commandName: IncomingRequestCommand
+  ): Promise<ResponseType> {
+    try {
+      // Send response message
+      return await this.internalSendMessage(
+        chargingStation,
+        messageId,
+        messagePayload,
+        MessageType.CALL_RESULT_MESSAGE,
+        commandName
+      )
+    } catch (error) {
+      handleSendMessageError(
+        chargingStation,
+        commandName,
+        MessageType.CALL_RESULT_MESSAGE,
+        error as Error,
+        {
+          throwError: true,
+        }
+      )
+      return null
+    }
+  }
 }

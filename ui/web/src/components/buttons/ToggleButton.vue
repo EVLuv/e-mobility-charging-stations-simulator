@@ -1,21 +1,23 @@
 <template>
-  <Button :class="{ on: state.status }" @click="click()">
-    <slot></slot>
+  <Button
+    :class="{ on: state.status }"
+    @click="click()"
+  >
+    <slot />
   </Button>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-
 import Button from '@/components/buttons/Button.vue'
 import { getFromLocalStorage, setToLocalStorage } from '@/composables'
+import { ref } from 'vue'
 
 const props = defineProps<{
   id: string
-  status?: boolean
-  shared?: boolean
-  on?: () => void
   off?: () => void
+  on?: () => void
+  shared?: boolean
+  status?: boolean
 }>()
 
 const $emit = defineEmits(['clicked'])
@@ -23,7 +25,7 @@ const $emit = defineEmits(['clicked'])
 const id = props.shared === true ? `shared-toggle-button-${props.id}` : `toggle-button-${props.id}`
 
 const state = ref<{ status: boolean }>({
-  status: getFromLocalStorage<boolean>(id, props.status ?? false)
+  status: getFromLocalStorage<boolean>(id, props.status ?? false),
 })
 
 const click = (): void => {
